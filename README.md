@@ -1191,16 +1191,19 @@ This comprehensive fine-tuning strategy ensures that the model remains flexible 
 
 - [LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking](https://arxiv.org/pdf/2204.08387)
 
-#### Fine-tuning Strategy
+### Fine-tuning Strategy
 
-For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond appropriately to a variety of prompts, which can be engineered to solve different downstream tasks. The fine-tuning process involves:
+For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond to a variety of prompts, which can be tailored to solve different downstream tasks. The fine-tuning process involves:
 
-- **Instruction Tuning the Text Decoder:** We fine-tune the text decoder to handle diverse downstream tasks by providing it with specific instructions on how to generate the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries. Instruction tuning allows the model to adapt to various tasks, enhancing its versatility and effectiveness【61†source】【63†source】.
-- **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in a zero-shot or few-shot setting. By carefully designing prompts, we can adapt the model to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training【61†source】【63†source】.
+- **Instruction Tuning the Text Decoder:** The text decoder is fine-tuned to handle diverse downstream tasks by providing specific instructions for generating the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries. Instruction tuning allows the model to adapt to various tasks, enhancing its versatility and effectiveness.
 
-This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
+- **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in zero-shot or few-shot settings. By carefully designing prompts, the model can be adapted to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training.
 
----
+- **Task-Specific Prompts:** Specific prompts are designed for each downstream task, guiding the model on how to process and respond to different types of input. For instance, prompts for document classification might instruct the model to identify key categories, while prompts for named entity recognition might direct the model to highlight specific entities within the text.
+
+- **Evaluation and Iteration:** Throughout the fine-tuning process, the model's performance is evaluated on various benchmarks, and prompts and tuning parameters are iteratively refined. This ensures that the model generalizes well to new tasks and maintains high accuracy and efficiency.
+
+This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms
 
 ### Related Work
 
