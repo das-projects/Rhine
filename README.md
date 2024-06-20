@@ -102,122 +102,114 @@ This research advances the state-of-the-art in multi-modal foundation models, pr
 #### Pre-training Datasets
 
 **IDL-WDS:**
-The IDL-WDS (Industry Documents Library - Web Dataset) comprises a large-scale collection of document images paired with OCR outputs in JSON format, designed for robust pre-training of document processing models.
+The IDL-WDS (Industry Documents Library - Web Dataset) is a comprehensive dataset comprising around 19 million pages of document images and corresponding OCR outputs in JSON format. This dataset is designed to facilitate robust pre-training of models on a diverse range of document types and structures.
 
-- **Size and Composition:** The dataset contains approximately 19 million pages, providing extensive coverage of various document types and structures. The documents include PDF files, TIFF images, JSON files with Textract OCR annotations, and OCR files with plain text.
+- **Size and Composition:** Approximately 19 million pages, including PDF files, TIFF images, and JSON files with Textract OCR annotations.
 - **Processing:**
-  - **Image Preprocessing:** Convert all images to a consistent resolution of 1024x1024 pixels and TIFF format. This ensures high-quality images and uniform input data for the model.
-  - **OCR JSON Parsing:** Parse the JSON files to extract word bounding boxes and corresponding text. Normalize the bounding box coordinates relative to the 1024x1024 image size.
+  - **Image Preprocessing:** Convert images to 1024x1024 pixels in TIFF format to ensure high-quality and uniform input data.
+  - **OCR JSON Parsing:** Extract word bounding boxes and text from JSON files, normalizing the bounding box coordinates relative to the 1024x1024 image size.
   - **Dataloader Implementation with LitData:** Use the `litdata` library from Lightning-AI for efficient data processing. This library supports data loading, transformation, and batching, optimizing the pipeline for large-scale datasets.
-      ```python
-      import litdata as ld
-      import torchvision.transforms as transforms
-      from PIL import Image
-      import json
-
-      # Define a transformation pipeline
-      transform = transforms.Compose([
-          transforms.Resize((1024, 1024)),
-          transforms.ToTensor()
-      ])
-
-      # Define a function to parse OCR JSON
-      def parse_ocr(json_file):
-          with open(json_file, 'r') as f:
-              data = json.load(f)
-          # Normalize bounding boxes
-          for page in data['pages']:
-              for bbox in page['bbox']:
-                  bbox[0] /= 1024
-                  bbox[1] /= 1024
-                  bbox[2] /= 1024
-                  bbox[3] /= 1024
-          return data
-
-      # Create a LitData dataset
-      class DocumentDataset(ld.Dataset):
-          def __init__(self, image_paths, json_paths, transform=None):
-              self.image_paths = image_paths
-              self.json_paths = json_paths
-              self.transform = transform
-
-          def __len__(self):
-              return len(self.image_paths)
-
-          def __getitem__(self, idx):
-              image = Image.open(self.image_paths[idx]).convert('RGB')
-              json_data = parse_ocr(self.json_paths[idx])
-              if self.transform:
-                  image = self.transform(image)
-              return image, json_data
-
-      # Instantiate the dataset
-      image_paths = ['path/to/image1.tiff', 'path/to/image2.tiff']  # Example paths
-      json_paths = ['path/to/ocr1.json', 'path/to/ocr2.json']  # Example paths
-      dataset = DocumentDataset(image_paths, json_paths, transform=transform)
-
-      # Create a DataLoader
-      dataloader = ld.DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
-      ```
 
 **PDFA-ENG-WDS:**
-The PDFA-ENG-WDS dataset focuses on English PDF documents, offering OCR annotations and bounding boxes for words within the documents.
+The PDFA-ENG-WDS dataset focuses on English PDF documents and provides OCR annotations and bounding boxes for words within the documents.
 
-- **Size and Composition:** The dataset spans approximately 1.5TB, with over 26 million pages and 18 billion text tokens. Metadata such as file sizes and rendering times are included to optimize loading and processing during training.
+- **Size and Composition:** Spanning approximately 1.5TB, with over 26 million pages and 18 billion text tokens.
 - **Processing:**
   - **Sharded Storage:** The dataset is stored in `.tar` files, compatible with efficient streaming and processing using the `litdata` library.
-  - **Text and Bounding Box Extraction:** Each document is paired with a JSON file containing words and their bounding boxes. Normalize these coordinates relative to the 1024x1024 image size and convert text to a suitable format for model input.
-  - **Optimized Dataloader with LitData:** Utilize the `litdata` library for efficient loading of large, sharded datasets. This approach supports parallel processing and efficient handling of large-scale data.
-      ```python
-      import litdata as ld
-      from torchvision import transforms
-      from PIL import Image
-      import json
+  - **Text and Bounding Box Extraction:** Normalize the bounding box coordinates relative to the 1024x1024 image size and convert the text to a suitable format for model input.
+  - **Optimized Dataloader with LitData:** Utilize the `litdata` library for efficient loading of large, sharded datasets, supporting parallel processing and handling large-scale data effectively.
 
-      # Define transformation pipeline
-      transform = transforms.Compose([
-          transforms.Resize((1024, 1024)),
-          transforms.ToTensor()
-      ])
+#### Code Example
 
-      # Function to parse OCR JSON
-      def parse_ocr(json_file):
-          with open(json_file, 'r') as f:
-              data = json.load(f)
-          # Normalize bounding boxes
-          for page in data['pages']:
-              for bbox in page['bbox']:
-                  bbox[0] /= 1024
-                  bbox[1] /= 1024
-                  bbox[2] /= 1024
-                  bbox[3] /= 1024
-          return data
+Below is a code example that includes downloading the dataset from Hugging Face, converting it into the `litdata` format, optimizing the data, and creating new shards for efficient processing:
 
-      # Create a LitData dataset
-      class PDFDocumentDataset(ld.Dataset):
-          def __init__(self, shard_paths, transform=None):
-              self.shard_paths = shard_paths
-              self.transform = transform
+```python
+import os
+from huggingface_hub import hf_hub_download
+import litdata as ld
+from torchvision import transforms
+from PIL import Image
+import json
 
-          def __len__(self):
-              return len(self.shard_paths)
+# Set up environment for Hugging Face dataset download
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
-          def __getitem__(self, idx):
-              shard_path = self.shard_paths[idx]
-              # Logic to load TIFF image and OCR JSON from the shard
-              image = Image.open(shard_path + '.tiff').convert('RGB')
-              json_data = parse_ocr(shard_path + '.json')
-              if self.transform:
-                  image = self.transform(image)
-              return image, json_data
+# Download a dataset shard from Hugging Face
+def download_dataset(repo_id, filename, cache_dir='datasets'):
+    filepath = hf_hub_download(repo_id=repo_id, filename=filename, cache_dir=cache_dir)
+    return filepath
 
-      # Instantiate the dataset
-      shard_paths = ['path/to/shard1', 'path/to/shard2']  # Example paths
-      dataset = PDFDocumentDataset(shard_paths, transform=transform)
+# Define transformation pipeline
+transform = transforms.Compose([
+    transforms.Resize((1024, 1024)),
+    transforms.ToTensor()
+])
 
-      # Create a DataLoader
-      dataloader = ld.DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
-      ```
+# Function to parse OCR JSON
+def parse_ocr(json_file):
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+    # Normalize bounding boxes
+    for page in data['pages']:
+        for bbox in page['bbox']:
+            bbox[0] /= 1024
+            bbox[1] /= 1024
+            bbox[2] /= 1024
+            bbox[3] /= 1024
+    return data
+
+# Create a LitData dataset
+class DocumentDataset(ld.Dataset):
+    def __init__(self, image_paths, json_paths, transform=None):
+        self.image_paths = image_paths
+        self.json_paths = json_paths
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        image = Image.open(self.image_paths[idx]).convert('RGB')
+        json_data = parse_ocr(self.json_paths[idx])
+        if self.transform:
+            image = self.transform(image)
+        return image, json_data
+
+# Example usage
+repo_id = 'pixparse/idl-wds'
+image_files = ['idl-train-00000.tar']
+json_files = ['idl-train-00000.json']
+
+# Download dataset files
+image_paths = [download_dataset(repo_id, img) for img in image_files]
+json_paths = [download_dataset(repo_id, jsn) for jsn in json_files]
+
+# Instantiate the dataset
+dataset = DocumentDataset(image_paths, json_paths, transform=transform)
+
+# Optimize the dataset and create new shards
+optimized_dir = 'optimized_datasets'
+ld.optimize(dataset, output_dir=optimized_dir, max_shard_size='1GB')
+
+# Create a StreamingDataset and DataLoader from the optimized data
+input_dir = optimized_dir
+streaming_dataset = ld.StreamingDataset(input_dir, shuffle=True)
+dataloader = ld.StreamingDataLoader(streaming_dataset, batch_size=32, num_workers=4)
+
+# Iterate through the dataloader
+for batch in dataloader:
+    images, annotations = batch
+    print(images.shape, annotations)
+```
+
+### Datasets Summary and Processing Strategy
+
+- **Consistency:** Standardize image resolutions to 1024x1024 pixels and convert them to TIFF format to ensure high-quality, uniform input data.
+- **Normalization:** Normalize bounding box coordinates in the OCR JSON files relative to the 1024x1024 image dimensions.
+- **Efficient Loading:** Use the `litdata` library for data processing, `torchvision` for image handling, and methods for handling large, sharded datasets. This ensures efficient data loading and processing, reducing bottlenecks during training.
+- **Metadata Utilization:** Utilize metadata such as file sizes and rendering times to filter out large or slow-to-render files, optimizing the dataset for efficient training at scale.
+
+By following these strategies, we can build an efficient dataloader that handles the complexity and scale of these datasets, ensuring smooth pre-training and fine-tuning processes for our multi-modal foundation model.
 
 #### Fine-tuning and Evaluation Datasets
 
