@@ -454,6 +454,7 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
 Here's the updated section with the additional information:
 
 ### Text Encoder
+
 The text encoder in our multi-modal foundation model leverages advanced techniques to handle long-context documents efficiently. We start with a pre-trained Large Language Model (LLM) such as Llama3 or Mistral and modify it to incorporate the improvements described in the LongLoRA framework. Specifically, LongLoRA employs:
 
 1. **Shifted Sparse Attention (S2-Attn)**: During fine-tuning, sparse local attention is utilized to reduce computational costs significantly, maintaining performance comparable to vanilla attention. This approach ensures that the model can handle extended context lengths without a proportional increase in computational resources. S2-Attn is implemented with minimal code changes and is optional during inference.
@@ -472,7 +473,8 @@ The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama
 
 By incorporating these advancements, our text encoder is equipped to handle large context sizes efficiently, enabling it to perform well on various downstream tasks such as document classification, named entity recognition, and more.
 
-### References
+**References**
+
 - [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
 - [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
 
@@ -967,7 +969,8 @@ class LLM2Vec(pl.LightningModule):
         return optimizer
 ```
 
-**Integration with Multiway Transformer:**
+### Integration with Multiway Transformer:
+
 To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images.
 
 ```python
@@ -1017,14 +1020,120 @@ def set_split_position(position):
     return apply_fn
 ```
 
-**Positional Embeddings for Bounding Boxes:**
+### Positional Embeddings for Bounding Boxes:
+
 We enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "GRPE: Relative Positional Encoding for Graph Transformer." This involves encoding the relative positional relationships between nodes in a graph, specifically tailored for OCR tasks. By embedding this spatial information directly into the transformer's self-attention mechanism, the model captures topological and edge-based relationships between textual elements in a document, improving its performance in tasks requiring an understanding of the document's visual and spatial context.
 
-**Prompt Encoder and Text Decoder:**
-After integrating the image and text embeddings using the Multiway Transformer, we incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks:
+### Prompt Encoder
 
-- **Prompt Encoder:** This component processes user prompts, converting them into embeddings that interact with the integrated text-image embeddings. The prompt encoder is designed to understand the context and specific requirements of the query, enabling precise and context-aware responses【61†source】【63†source】.
-- **Text Decoder:** Based on the embeddings from the Multiway Transformer and the prompt encoder, the text decoder generates the relevant output. The decoder is trained to produce sequences of text and corresponding bounding boxes, effectively mapping answers to specific regions in the document. This allows the model to output not only textual answers but also their precise locations within the document, facilitating tasks such as information extraction and document navigation.
+The prompt encoder will be a small text embedding model that processes the prompt and generates an embedding. This embedding is then added to the embedding received from the multiway transformer before feeding into the text decoder.
+
+1. **Model Architecture**:
+
+   - Use a lightweight transformer or any efficient text embedding model for the prompt encoder.
+   - The model should output embeddings of the same dimension as the multiway transformer to ensure seamless addition.
+
+2. **Embedding Process**:
+   - Take the input prompt and convert it into token embeddings.
+   - Process these embeddings through the prompt encoder to generate a final prompt embedding.
+
+### Text Decoder
+
+The text decoder is a fine-tuned LLM like Llama3, which generates word and bounding box pairs for various extraction tasks or plain text when describing the document.
+
+1. **Model Architecture**:
+
+   - Use Llama3 or another suitable LLM for the text decoder.
+   - Fine-tune the model on tasks involving generating word and bounding box pairs as well as descriptive text for documents.
+
+2. **Fine-tuning**:
+   - Use datasets that include document descriptions, extraction tasks, and bounding box annotations.
+   - Train the model to generate output sequences that consist of text and bounding box coordinates.
+
+### Integration
+
+1. **Combining Embeddings**:
+
+   - Add the prompt embedding from the prompt encoder to the multiway transformer embedding.
+   - This combined embedding is then passed to the text decoder.
+
+2. **Training Strategy**:
+   - Jointly train the prompt encoder and text decoder on tasks involving both text generation and bounding box prediction.
+   - Ensure that the loss function accounts for both the text and the bounding box outputs.
+
+### Implementation Example
+
+Here's a conceptual implementation in PyTorch using PyTorch Lightning:
+
+```python
+import torch
+import torch.nn as nn
+import pytorch_lightning as pl
+from transformers import AutoModel, AutoTokenizer, LlamaForCausalLM
+
+class PromptEncoder(nn.Module):
+    def __init__(self, model_name, embed_dim):
+        super(PromptEncoder, self).__init__()
+        self.model = AutoModel.from_pretrained(model_name)
+        self.linear = nn.Linear(self.model.config.hidden_size, embed_dim)
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        pooled_output = outputs.last_hidden_state.mean(dim=1)  # Simple mean pooling
+        prompt_embedding = self.linear(pooled_output)
+        return prompt_embedding
+
+class MultiModalModel(pl.LightningModule):
+    def __init__(self, multiway_transformer, prompt_encoder, text_decoder, tokenizer):
+        super(MultiModalModel, self).__init__()
+        self.multiway_transformer = multiway_transformer
+        self.prompt_encoder = prompt_encoder
+        self.text_decoder = text_decoder
+        self.tokenizer = tokenizer
+
+    def forward(self, document_embeddings, prompt_input_ids, prompt_attention_mask):
+        prompt_embedding = self.prompt_encoder(prompt_input_ids, prompt_attention_mask)
+        combined_embedding = document_embeddings + prompt_embedding.unsqueeze(1)
+        decoder_input_ids = torch.full(
+            (combined_embedding.size(0), 1), self.tokenizer.cls_token_id, device=self.device
+        )
+        decoder_outputs = self.text_decoder(
+            input_ids=decoder_input_ids,
+            encoder_hidden_states=combined_embedding
+        )
+        return decoder_outputs
+
+    def training_step(self, batch, batch_idx):
+        document_embeddings = self.multiway_transformer(batch["document_images"])
+        prompt_input_ids = batch["prompt_input_ids"]
+        prompt_attention_mask = batch["prompt_attention_mask"]
+        labels = batch["labels"]
+
+        outputs = self.forward(document_embeddings, prompt_input_ids, prompt_attention_mask)
+        loss = nn.CrossEntropyLoss()(outputs.logits.view(-1, self.text_decoder.config.vocab_size), labels.view(-1))
+        self.log("train_loss", loss)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
+        return optimizer
+
+# Example usage
+multiway_transformer = ...  # Your multiway transformer model
+tokenizer = AutoTokenizer.from_pretrained("llama3")
+prompt_encoder = PromptEncoder(model_name="bert-base-uncased", embed_dim=multiway_transformer.config.hidden_size)
+text_decoder = LlamaForCausalLM.from_pretrained("llama3")
+
+model = MultiModalModel(multiway_transformer, prompt_encoder, text_decoder, tokenizer)
+```
+
+### Explanation
+
+1. **PromptEncoder**: A lightweight transformer (e.g., BERT) converts the prompt into an embedding.
+2. **MultiModalModel**: Combines document embeddings from the multiway transformer and prompt embeddings, then passes the combined embedding to the text decoder (Llama3).
+3. **Training**: The model is trained on tasks involving both text generation and bounding box prediction, with a loss function accounting for both.
+
+This setup ensures the model can efficiently handle prompts and generate appropriate responses, including word and bounding box pairs for various extraction tasks.
 
 #### Pre-training Strategy
 
