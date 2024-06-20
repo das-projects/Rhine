@@ -100,11 +100,6 @@ To integrate the image and text embeddings, we utilize a multiway transformer. T
 
 By integrating these advancements, our multi-modal foundation model is equipped to handle large context sizes efficiently, enabling it to perform well on various downstream tasks such as document classification, named entity recognition, and more. This work sets a new standard for processing multi-modal documents with extended contexts, demonstrating the powerful synergy of modern NLP and computer vision techniques.
 
-**References**
-
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
-
 ---
 
 ## Methodology
@@ -170,8 +165,10 @@ By following these strategies, we can efficiently process and utilize the IDL-WD
 
 **References**
 
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+- [Industry Documents Library](https://huggingface.co/datasets/pixparse/idl-wds)
+- [PDF Association dataset](https://huggingface.co/datasets/pixparse/pdfa-eng-wds)
+- [PubTables-1M](https://huggingface.co/datasets/bsmock/pubtables-1m)
+- [PubLayNet](https://huggingface.co/datasets/creative-graphic-design/PubLayNet)
 
 #### Code Example
 
@@ -261,6 +258,11 @@ for batch in dataloader:
 ### Image Encoder
 
 The image encoder in our model is based on the Vision Transformer (ViT) model, pre-trained using the BEITv2 approach. BEITv2 leverages a visual tokenizer to convert images into discrete visual tokens, enabling masked image modeling (MIM). Specifically, approximately 40% of image patches are masked, and the model is trained to predict the CLIP embeddings of these masked patches. This technique ensures that the model captures high-level visual representations and is robust in understanding the visual content in documents. The pretraining also involves a [CLS] token to aggregate patch information into global representations, enhancing the model’s ability to generate comprehensive visual embeddings.
+
+**References**
+
+- [Image as a Foreign Language: BEIT Pretraining for All Vision and Vision-Language Tasks](https://arxiv.org/pdf/2208.10442)
+- [BEIT V2: Masked Image Modeling with Vector-Quantized Visual Tokenizers](https://arxiv.org/pdf/2208.06366)
 
 ```python
 import math
@@ -462,11 +464,6 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
     return model
 ```
 
-**References**
-
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
-
 ### Text Encoder
 
 The text encoder in our multi-modal foundation model leverages advanced techniques to handle long-context documents efficiently. We start with a pre-trained Large Language Model (LLM) such as Llama3 or Mistral and modify it to incorporate the improvements described in the LongLoRA framework. Specifically, LongLoRA employs:
@@ -491,6 +488,7 @@ By incorporating these advancements, our text encoder is equipped to handle larg
 
 - [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
 - [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+- [Learnable Fourier Features for Multi-Dimensional Spatial Positional Encoding](https://arxiv.org/pdf/2106.02795)
 
 This section provides a comprehensive overview of how LongLoRA's techniques and LLM2Vec are utilized in the text encoder, ensuring efficient handling of long contexts and robust performance on various tasks.
 
@@ -989,8 +987,7 @@ To integrate text and image embeddings, we employ a Multiway Transformer archite
 
 **References**
 
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+- [VLMo: Unified vision-language pre-training with mixture-of-modality-experts](https://arxiv.org/pdf/2111.02358)
 
 ```python
 import copy
@@ -1045,8 +1042,7 @@ We enhance the positional embeddings to incorporate the spatial information of O
 
 **References**
 
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+- [Learnable Fourier Features for Multi-Dimensional Spatial Positional Encoding](https://arxiv.org/pdf/2106.02795)
 
 ### Prompt Encoder
 
@@ -1063,8 +1059,7 @@ The prompt encoder will be a small text embedding model that processes the promp
 
 **References**
 
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+- [MosaicBERT: A Bidirectional Encoder Optimized for Fast Pretraining](https://arxiv.org/pdf/2312.17482)
 
 ### Text Decoder
 
@@ -1081,8 +1076,7 @@ The text decoder is a fine-tuned LLM like Llama3, which generates word and bound
 
 **References**
 
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+- [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/pdf/2104.08691)
 
 ### Integration
 
@@ -1195,8 +1189,7 @@ This comprehensive fine-tuning strategy ensures that the model remains flexible 
 
 **References**
 
-- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
-- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+- [LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking](https://arxiv.org/pdf/2204.08387)
 
 #### Fine-tuning Strategy
 
@@ -1299,5 +1292,10 @@ To ensure the effectiveness and robustness of our multi-modal foundation model, 
 3. **Ablation Studies:** Conducting ablation studies to evaluate the impact of different components (e.g., removing the prompt encoder or text decoder) on overall performance.
 
 By utilizing these diverse evaluation metrics, we can comprehensively assess the performance and robustness of our multi-modal foundation model at each stage of pre-training and fine-tuning, ensuring its effectiveness across various downstream tasks.
+
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
 
 ---
