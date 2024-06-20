@@ -95,75 +95,31 @@ To integrate the image and text embeddings, we utilize a multiway transformer. T
 
 ### Contributions
 
-1. **Advanced Image Encoder**: We utilize a Vision Transformer (ViT) model with BEITv2 pre-training to enhance image understanding by predicting CLIP embeddings.
+**Advanced Image and Text Encoding**: Our model leverages a Vision Transformer (ViT) with BEITv2 pre-training to enhance image understanding by predicting CLIP embeddings. For text encoding, we adapt a pre-trained Large Language Model (LLM) using the LLM2Vec approach, incorporating bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning (SimCSE). This dual approach ensures the model can handle structured OCR outputs effectively, providing a robust foundation for further processing.
 
-2. **Efficient Text Encoder**: We adapt a pre-trained LLM using the LLM2Vec approach, incorporating bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning (SimCSE) to handle structured OCR outputs effectively.
+**Extended Context Handling and Integration**: We incorporate LongLoRA, combining Shifted Sparse Attention (S2-Attn) and parameter-efficient fine-tuning, to significantly extend the context window without a proportional increase in computational resources. This extended context is integrated with a multiway transformer, allowing efficient cross-modal attention and enhancing the model's understanding of visual and textual relationships. This integration ensures that the model can process and understand documents with complex layouts and extended text sequences.
 
-3. **Extended Context Handling**: We incorporate LongLoRA, combining Shifted Sparse Attention (S2-Attn) and parameter-efficient fine-tuning, to extend the context window significantly without a proportional increase in computational resources.
-
-4. **Multiway Transformer Integration**: By integrating image and text embeddings with a multiway transformer, we achieve efficient cross-modal attention, enhancing the model’s understanding of visual and textual relationships.
-
-5. **Robust Pre-training and Fine-tuning**: Our model is pre-trained on large datasets and fine-tuned on specific tasks, ensuring robust performance in document classification, layout analysis, named entity recognition, and other downstream tasks.
-
-6. **Prompt Encoder and Text Decoder**: We incorporate a prompt encoder and text decoder to generate relevant answers based on given prompts and document OCR pairs, enhancing the model’s ability to perform contextually aware information extraction.
-
-By integrating these advancements, our multi-modal foundation model is equipped to handle large context sizes efficiently, enabling it to perform well on various downstream tasks such as document classification, named entity recognition, and more. This work sets a new standard for processing multi-modal documents with extended contexts, demonstrating the powerful synergy of modern NLP and computer vision techniques.
+**Robust Pre-training, Fine-tuning, and Interaction Mechanisms**: Our model undergoes extensive pre-training on large datasets and is fine-tuned on specific tasks such as document classification, layout analysis, and named entity recognition. This fine-tuning ensures robust performance across various downstream tasks. Additionally, we incorporate a prompt encoder and text decoder, which allows the model to generate relevant answers based on given prompts and document OCR pairs. This capability enhances the model's ability to perform contextually aware information extraction, making it versatile and adaptable for various applications.
 
 ---
 
 ## Methodology
 
-### Datasets for Pre-training and Fine-tuning
-
-#### Pre-training and Fine-tuning Datasets
+### Dataset Details
 
 **IDL-WDS:**
-The IDL-WDS (Industry Documents Library - Web Dataset) is a comprehensive dataset comprising around 19 million pages of document images and corresponding OCR outputs in JSON format. This dataset is designed to facilitate robust pre-training of models on a diverse range of document types and structures.
-
-- **Size and Composition:** Approximately 19 million pages, including PDF files, TIFF images, and JSON files with Textract OCR annotations.
-- **Processing:**
-  - **Image Preprocessing:** Convert images to 1024x1024 pixels in TIFF format to ensure high-quality and uniform input data.
-  - **OCR JSON Parsing:** Extract word bounding boxes and text from JSON files, normalizing the bounding box coordinates relative to the 1024x1024 image size.
-  - **Dataloader Implementation with LitData:** Use the `litdata` library from Lightning-AI for efficient data processing. This library supports data loading, transformation, and batching, optimizing the pipeline for large-scale datasets.
+The IDL-WDS (Industry Documents Library - Web Dataset) is a comprehensive dataset designed to facilitate robust pre-training on a diverse range of document types and structures. It comprises approximately 19 million pages, including PDF files, TIFF images, and JSON files with Textract OCR annotations. For processing, images are converted to 1024x1024 pixels in TIFF format to ensure high-quality input data. OCR JSON files are parsed to extract word bounding boxes and text, with bounding box coordinates normalized relative to the 1024x1024 image size. The `litdata` library from Lightning-AI is utilized for efficient data processing, supporting data loading, transformation, and batching, optimizing the pipeline for large-scale datasets.
 
 **PDFA-ENG-WDS:**
-The PDFA-ENG-WDS dataset focuses on English PDF documents and provides OCR annotations and bounding boxes for words within the documents.
-
-- **Size and Composition:** Spanning approximately 1.5TB, with over 26 million pages and 18 billion text tokens.
-- **Processing:**
-  - **Sharded Storage:** The dataset is stored in `.tar` files, compatible with efficient streaming and processing using the `litdata` library.
-  - **Text and Bounding Box Extraction:** Normalize the bounding box coordinates relative to the 1024x1024 image size and convert the text to a suitable format for model input.
-  - **Optimized Dataloader with LitData:** Utilize the `litdata` library for efficient loading of large, sharded datasets, supporting parallel processing and handling large-scale data effectively.
+The PDFA-ENG-WDS dataset focuses on English PDF documents, providing OCR annotations and bounding boxes for words. Spanning approximately 1.5TB, it contains over 26 million pages and 18 billion text tokens. The dataset is stored in `.tar` files, compatible with efficient streaming and processing using the `litdata` library. Text and bounding box coordinates are normalized relative to the 1024x1024 image size and converted to a suitable format for model input. The `litdata` library supports efficient loading of large, sharded datasets, enabling parallel processing and handling large-scale data effectively.
 
 **PubTables-1M:**
-The PubTables-1M dataset is designed for table detection and structure recognition within documents, offering an extensive collection of annotated data to pre-train and fine-tune models for layout analysis and table structure extraction tasks.
-
-- **Size and Composition:** The dataset includes approximately 947,642 cropped table instances and 575,305 document page instances, providing comprehensive annotations for both table structure and document layout:
-
-  - **Structure Recognition Data:** Includes images and annotations for train, test, and validation sets, with XML files detailing table structures and word bounding boxes.
-  - **Detection Data:** Contains images and annotations for detecting table locations within full document pages, along with word-level bounding box information.
-
-- **Processing and Loading:**
-  - **Download and Extraction:** Use provided scripts to download and organize the dataset.
-  - **Transformation:** Standardize images to 1024x1024 pixels and normalize bounding box coordinates relative to this size.
-  - **Dataloader Implementation with LitData:** Utilize the `litdata` library to efficiently load, transform, and batch the data.
+The PubTables-1M dataset is designed for table detection and structure recognition within documents, providing an extensive collection of annotated data to pre-train and fine-tune models for layout analysis and table structure extraction tasks. It includes approximately 947,642 cropped table instances and 575,305 document page instances. The dataset contains images and annotations for train, test, and validation sets, detailing table structures and word bounding boxes. Images are standardized to 1024x1024 pixels, and bounding box coordinates are normalized relative to this size. The `litdata` library is used for efficient loading, transformation, and batching of data.
 
 **PubLayNet:**
-PubLayNet is a large-scale dataset aimed at document layout analysis, including annotations for text, titles, lists, tables, and figures within research paper images. This dataset is particularly valuable for pre-training and fine-tuning models for tasks such as document classification and named entity recognition.
+PubLayNet is a large-scale dataset aimed at document layout analysis, with annotations for text, titles, lists, tables, and figures within research paper images. It contains over 1 million annotated document images sourced from PubMed Central articles. The dataset includes bounding boxes and labels for various layout components and is divided into training, validation, and test splits. Images are converted to 1024x1024 pixels, and bounding box coordinates are normalized for consistency. The `litdata` library handles large-scale data efficiently, supporting shuffling, batching, and parallel processing.
 
-- **Size and Composition:** PubLayNet contains over 1 million annotated document images, sourced from PubMed Central articles. The dataset includes detailed annotations for various layout components:
-
-  - **Annotations:** The dataset provides bounding boxes and labels for text blocks, titles, lists, tables, and figures. It is divided into training, validation, and test splits:
-    - **Training Set:** Approximately 335,703 images
-    - **Validation Set:** Approximately 11,245 images
-    - **Test Set:** Approximately 11,405 images
-
-- **Processing and Loading:**
-  - **Download and Extraction:** Access the dataset files via Hugging Face, ensuring all necessary files are downloaded.
-  - **Transformation:** Convert images to 1024x1024 pixels, and normalize the bounding boxes relative to this size for consistency.
-  - **Dataloader Implementation with LitData:** Use the `litdata` library to handle large-scale data efficiently, with capabilities for shuffling, batching, and parallel processing.
-
-### Datasets Summary and Processing Strategy
+### Datasets Processing Strategy
 
 - **Consistency:** Standardize image resolutions to 1024x1024 pixels and convert them to TIFF format to ensure high-quality, uniform input data.
 - **Normalization:** Normalize bounding box coordinates in the OCR JSON files relative to the 1024x1024 image dimensions.
@@ -475,24 +431,17 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
 
 ### Text Encoder
 
-The text encoder in our multi-modal foundation model leverages advanced techniques to handle long-context documents efficiently. We start with a pre-trained Large Language Model (LLM) such as Llama3 or Mistral and modify it to incorporate the improvements described in the LongLoRA framework. Specifically, LongLoRA employs:
+The text encoder in our multi-modal foundation model leverages advanced techniques to handle long-context documents efficiently. We start with a pre-trained Large Language Model (LLM) such as Llama3 or Mistral and modify it to incorporate the improvements described in the LongLoRA framework. LongLoRA employs two primary enhancements:
 
-1. **Shifted Sparse Attention (S2-Attn)**: During fine-tuning, sparse local attention is utilized to reduce computational costs significantly, maintaining performance comparable to vanilla attention. This approach ensures that the model can handle extended context lengths without a proportional increase in computational resources. S2-Attn is implemented with minimal code changes and is optional during inference.
+First, **Shifted Sparse Attention (S2-Attn)** is utilized during fine-tuning to significantly reduce computational costs while maintaining performance comparable to vanilla attention. This approach ensures that the model can handle extended context lengths without a proportional increase in computational resources. Implemented with minimal code changes, S2-Attn is optional during inference, making it both efficient and flexible.
 
-2. **Parameter-Efficient Fine-Tuning**: LongLoRA extends the capabilities of LoRA (Low-Rank Adaptation) by ensuring that embeddings and normalization layers are trainable. This combination enhances the model's ability to handle longer contexts effectively.
+Second, **Parameter-Efficient Fine-Tuning** extends the capabilities of LoRA (Low-Rank Adaptation) by ensuring that embeddings and normalization layers are trainable. This combination enhances the model's ability to handle longer contexts effectively. Using these techniques, LongLoRA demonstrates the ability to extend the context window of LLMs substantially. For instance, Llama2 7B can be extended from a 4k context to 100k, or Llama2 70B can be extended to 32k, all while maintaining computational efficiency.
 
-Using these techniques, LongLoRA demonstrates the ability to extend the context window of LLMs substantially. For example, Llama2 7B can be extended from a 4k context to 100k, or Llama2 70B can be extended to 32k, all while maintaining computational efficiency.
+Additionally, the model with extended context capabilities is further enhanced using LLM2Vec. LLM2Vec generates high-quality contextual vector representations by leveraging the power of pre-trained LLMs and refining them for specific tasks. The process involves fine-tuning models to produce embeddings that capture the nuanced meanings of words and phrases in context. Implementing various pooling strategies, such as mean pooling, weighted mean pooling, and EOS token pooling, allows for flexible and robust extraction of sentence-level embeddings. By combining LongLoRA's extended context capabilities with LLM2Vec's advanced embedding techniques, the model is well-suited for handling large context sizes and performing well on various downstream tasks, such as document classification and named entity recognition.
 
-Additionally, the model with extended context capabilities is further enhanced using LLM2Vec. This involves:
-
-- **Contextual Embeddings**: LLM2Vec generates high-quality contextual vector representations by leveraging the power of pre-trained LLMs and refining them for specific tasks. The process involves fine-tuning models to produce embeddings that capture the nuanced meanings of words and phrases in context.
-- **Pooling Strategies**: The implementation of different pooling strategies, such as mean pooling, weighted mean pooling, and EOS token pooling, allows for flexible and robust extraction of sentence-level embeddings.
-- **Integration with LongLoRA**: By combining LongLoRA's extended context capabilities with LLM2Vec's advanced embedding techniques, the model is well-suited for handling large context sizes and performing well on various downstream tasks, such as document classification and named entity recognition.
-
-The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama3 or Mistral, adapted using the LLM2Vec approach. This process includes enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The goal is to transform a decoder-only LLM into a strong text encoder. The steps involve fine-tuning the model to predict masked tokens and using dropout techniques to create positive examples for contrastive learning. This adaptation is crucial for handling the structured nature of OCR outputs, as described in "LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders."
+The text encoder utilizes a pre-trained LLM such as Llama3 or Mistral, adapted using the LLM2Vec approach. This process includes enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The goal is to transform a decoder-only LLM into a strong text encoder. The steps involve fine-tuning the model to predict masked tokens and using dropout techniques to create positive examples for contrastive learning. This adaptation is crucial for handling the structured nature of OCR outputs, as described in "LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders."
 
 By incorporating these advancements, our text encoder is equipped to handle large context sizes efficiently, enabling it to perform well on various downstream tasks such as document classification, named entity recognition, and more.
-
 **References**
 
 - [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
@@ -1055,16 +1004,13 @@ We enhance the positional embeddings to incorporate the spatial information of O
 
 ### Prompt Encoder
 
-The prompt encoder will be a small text embedding model that processes the prompt and generates an embedding. This embedding is then added to the embedding received from the multiway transformer before feeding into the text decoder.
+The prompt encoder is a small text embedding model designed to process the prompt and generate an embedding. This embedding is then added to the embedding received from the multiway transformer before feeding into the text decoder.
 
-1. **Model Architecture**:
+**Model Architecture**:
+The architecture utilizes a lightweight transformer or any efficient text embedding model for the prompt encoder. The model is designed to output embeddings of the same dimension as the multiway transformer to ensure seamless integration.
 
-   - Use a lightweight transformer or any efficient text embedding model for the prompt encoder.
-   - The model should output embeddings of the same dimension as the multiway transformer to ensure seamless addition.
-
-2. **Embedding Process**:
-   - Take the input prompt and convert it into token embeddings.
-   - Process these embeddings through the prompt encoder to generate a final prompt embedding.
+**Embedding Process**:
+The process begins by taking the input prompt and converting it into token embeddings. These embeddings are then processed through the prompt encoder to generate a final prompt embedding, which is added to the multiway transformer embedding before being input to the text decoder.
 
 **References**
 
@@ -1072,16 +1018,13 @@ The prompt encoder will be a small text embedding model that processes the promp
 
 ### Text Decoder
 
-The text decoder is a fine-tuned LLM like Llama3, which generates word and bounding box pairs for various extraction tasks or plain text when describing the document.
+The text decoder in our multi-modal model is a fine-tuned LLM like Llama3, which generates word and bounding box pairs for various extraction tasks or plain text when describing documents.
 
-1. **Model Architecture**:
+**Model Architecture**:
+We use Llama3 or another suitable LLM for the text decoder. The model is fine-tuned to handle tasks that involve generating word and bounding box pairs, as well as descriptive text for documents.
 
-   - Use Llama3 or another suitable LLM for the text decoder.
-   - Fine-tune the model on tasks involving generating word and bounding box pairs as well as descriptive text for documents.
-
-2. **Fine-tuning**:
-   - Use datasets that include document descriptions, extraction tasks, and bounding box annotations.
-   - Train the model to generate output sequences that consist of text and bounding box coordinates.
+**Fine-tuning**:
+The fine-tuning process involves using datasets that include document descriptions, extraction tasks, and bounding box annotations. The model is trained to generate output sequences that consist of both text and bounding box coordinates, enabling it to effectively perform various document analysis tasks.
 
 **References**
 
@@ -1089,14 +1032,11 @@ The text decoder is a fine-tuned LLM like Llama3, which generates word and bound
 
 ### Integration
 
-1. **Combining Embeddings**:
+The integration of our multi-modal foundation model involves combining the embeddings generated by the prompt encoder with those from the multiway transformer. This combined embedding is then passed to the text decoder. Specifically, a lightweight transformer, such as BERT, is used by the prompt encoder to convert the prompt into an embedding. This embedding is then added to the multiway transformer embedding before being input to the text decoder, typically a fine-tuned LLM like Llama3.
 
-   - Add the prompt embedding from the prompt encoder to the multiway transformer embedding.
-   - This combined embedding is then passed to the text decoder.
+The training strategy for this model involves jointly training the prompt encoder and text decoder on tasks that require both text generation and bounding box prediction. This joint training approach ensures that the model can generate coherent text sequences alongside accurate bounding box coordinates. The loss function is carefully designed to account for both text and bounding box outputs, allowing the model to learn these tasks simultaneously and efficiently.
 
-2. **Training Strategy**:
-   - Jointly train the prompt encoder and text decoder on tasks involving both text generation and bounding box prediction.
-   - Ensure that the loss function accounts for both the text and the bounding box outputs.
+The prompt encoder processes the prompt into an embedding using a lightweight transformer model. The multi-modal model combines this prompt embedding with document embeddings from the multiway transformer, which are then passed to the text decoder. The text decoder generates the final output, producing both text and bounding box pairs for various extraction tasks. This comprehensive setup enables the model to effectively handle prompts and generate appropriate responses, ensuring it performs well on diverse document analysis tasks.
 
 ### Implementation Example
 
@@ -1164,37 +1104,25 @@ text_decoder = LlamaForCausalLM.from_pretrained("llama3")
 model = MultiModalModel(multiway_transformer, prompt_encoder, text_decoder, tokenizer)
 ```
 
-### Explanation
+### Pre-training Strategy
 
-1. **PromptEncoder**: A lightweight transformer (e.g., BERT) converts the prompt into an embedding.
-2. **MultiModalModel**: Combines document embeddings from the multiway transformer and prompt embeddings, then passes the combined embedding to the text decoder (Llama3).
-3. **Training**: The model is trained on tasks involving both text generation and bounding box prediction, with a loss function accounting for both.
+Our pre-training strategy leverages three key objectives: Masked Language Modeling (MLM), Masked Image Modeling (MIM), and Word-Patch Alignment (WPA). Inspired by "LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking," these objectives aim to enable the model to effectively learn multimodal representations.
 
-This setup ensures the model can efficiently handle prompts and generate appropriate responses, including word and bounding box pairs for various extraction tasks.
+For **Masked Language Modeling (MLM)**, 30% of text tokens are masked using a span masking strategy, with span lengths following a Poisson distribution. The goal is to maximize the log-likelihood of predicting these masked tokens based on contextual representations from both text and image sequences. This helps the model understand the relationship between textual content and layout information.
 
-#### Pre-training Strategy
+In **Masked Image Modeling (MIM)**, around 40% of image tokens are masked using a blockwise masking strategy. The model is then trained to reconstruct these masked tokens using a cross-entropy loss, which encourages it to interpret visual content through the context provided by both text and image tokens. This objective ensures that the model captures high-level visual structures rather than just low-level details.
 
-Our pre-training strategy employs three key objectives: Masked Language Modeling (MLM), Masked Image Modeling (MIM), and Word-Patch Alignment (WPA). These objectives, inspired by techniques in "LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking," are designed to enable the model to learn multimodal representations effectively.
+**Word-Patch Alignment (WPA)** aligns text words with their corresponding image patches. This involves predicting whether the image patches corresponding to a text word are masked. By assigning binary aligned/unaligned labels to unmasked text tokens based on their image patch masking status, the model learns a fine-grained alignment between text and image modalities, which is crucial for tasks requiring precise text-image correspondence.
 
-1. **Masked Language Modeling (MLM):**
+### Fine-tuning Strategy
 
-   - We mask 30% of text tokens using a span masking strategy, where span lengths follow a Poisson distribution. The objective is to maximize the log-likelihood of predicting the masked tokens based on the contextual representations from both text and image sequences. This helps the model learn the correspondence between textual content and layout information.
+Our fine-tuning strategy adopts a prompt-based approach inspired by methods described in the Segment Anything Model (SAM). This enables the model to respond effectively to a variety of prompts tailored to solve different downstream tasks.
 
-2. **Masked Image Modeling (MIM):**
+**Instruction Tuning the Text Decoder:** The text decoder is fine-tuned to handle diverse downstream tasks by providing specific instructions on generating the relevant output. This includes producing text sequences and identifying corresponding bounding boxes in response to various queries. By doing so, the model becomes adept at generating contextually accurate outputs based on the instructions provided.
 
-   - We mask approximately 40% of image tokens using a blockwise masking strategy. The model is then trained to reconstruct the masked tokens using a cross-entropy loss, encouraging it to interpret visual content through the context provided by both text and image tokens. This objective ensures the model captures high-level visual structures rather than low-level details.
+**Zero-Shot and Few-Shot Learning:** Leveraging the model’s pre-trained capabilities, the prompt-based strategy allows it to perform tasks in zero-shot or few-shot settings. By carefully designing prompts, the model can be adapted to various applications, such as document layout analysis, document classification, and named entity recognition, without requiring extensive additional training.
 
-3. **Word-Patch Alignment (WPA):**
-   - This objective aligns text words with their corresponding image patches. It involves predicting whether the image patches corresponding to a text word are masked. By assigning binary aligned/unaligned labels to unmasked text tokens based on their image patch masking status, the model learns a fine-grained alignment between text and image modalities. This is critical for tasks requiring precise text-image correspondence.
-
-#### Fine-tuning Strategy
-
-For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond appropriately to a variety of prompts, which can be engineered to solve different downstream tasks. The fine-tuning process involves:
-
-- **Instruction Tuning the Text Decoder:** We fine-tune the text decoder to handle diverse downstream tasks by providing it with specific instructions on how to generate the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries【61†source】【63†source】.
-- **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in a zero-shot or few-shot setting. By carefully designing prompts, we can adapt the model to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training【61†source】【63†source】.
-
-This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
+This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of efficiently performing a wide range of tasks. It leverages the strengths of pre-trained embeddings and prompt-based interaction mechanisms to maintain high performance across various applications.
 
 **References**
 
