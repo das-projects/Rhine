@@ -109,7 +109,6 @@ The IDL-WDS (Industry Documents Library - Web Dataset) comprises a large-scale c
   - **Image Preprocessing:** Convert all images to a consistent resolution of 1024x1024 pixels and TIFF format. This ensures high-quality images and uniform input data for the model.
   - **OCR JSON Parsing:** Parse the JSON files to extract word bounding boxes and corresponding text. Normalize the bounding box coordinates relative to the 1024x1024 image size.
   - **Dataloader Implementation with LitData:** Use the `litdata` library from Lightning-AI for efficient data processing. This library supports data loading, transformation, and batching, optimizing the pipeline for large-scale datasets.
-    - **Code Example:**
       ```python
       import litdata as ld
       import torchvision.transforms as transforms
@@ -169,7 +168,6 @@ The PDFA-ENG-WDS dataset focuses on English PDF documents, offering OCR annotati
   - **Sharded Storage:** The dataset is stored in `.tar` files, compatible with efficient streaming and processing using the `litdata` library.
   - **Text and Bounding Box Extraction:** Each document is paired with a JSON file containing words and their bounding boxes. Normalize these coordinates relative to the 1024x1024 image size and convert text to a suitable format for model input.
   - **Optimized Dataloader with LitData:** Utilize the `litdata` library for efficient loading of large, sharded datasets. This approach supports parallel processing and efficient handling of large-scale data.
-    - **Code Example:**
       ```python
       import litdata as ld
       from torchvision import transforms
