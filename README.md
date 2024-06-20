@@ -17,7 +17,9 @@ A Promptable model for document classification and extraction 🚀⚡🔥<br>
 </div>
  -->
 
-# Rhine: A Foundational Model for Intelligent Document Processing
+# A Foundational Model for Intelligent Document Processing
+
+**Dr Arijit Das**
 
 ## Outline
 
