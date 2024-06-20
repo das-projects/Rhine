@@ -141,6 +141,91 @@ For fine-tuning, we adopt a prompt-based strategy inspired by methods described 
 
 This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
 
+
+### Methodology
+
+#### Model Architecture
+
+**Image Encoder:**
+The image encoder in our model is based on the Vision Transformer (ViT) model, pre-trained using the BEITv2 approach. BEITv2 leverages a visual tokenizer to convert images into discrete visual tokens, enabling masked image modeling (MIM). Specifically, approximately 40% of image patches are masked, and the model is trained to predict the CLIP embeddings of these masked patches. This technique ensures that the model captures high-level visual representations and is robust in understanding the visual content in documents. The pretraining also involves a [CLS] token to aggregate patch information into global representations, enhancing the model’s ability to generate comprehensive visual embeddings【52†source】【53†source】.
+
+**Text Encoder:**
+The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama3 or Mistral, adapted using the LLM2Vec approach. This process includes enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The goal is to transform a decoder-only LLM into a strong text encoder. The steps involve fine-tuning the model to predict masked tokens and using dropout techniques to create positive examples for contrastive learning. This adaptation is crucial for handling the structured nature of OCR outputs, as described in "LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders"【38†source】.
+
+**Integration with Multiway Transformer:**
+To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images【44†source】.
+
+**Positional Embeddings for Bounding Boxes:**
+We enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "GRPE: Relative Positional Encoding for Graph Transformer." This involves encoding the relative positional relationships between nodes in a graph, specifically tailored for OCR tasks. By embedding this spatial information directly into the transformer's self-attention mechanism, the model captures topological and edge-based relationships between textual elements in a document, improving its performance in tasks requiring an understanding of the document's visual and spatial context【45†source】.
+
+**Prompt Encoder and Text Decoder:**
+After integrating the image and text embeddings using the Multiway Transformer, we incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks:
+- **Prompt Encoder:** This component processes user prompts, converting them into embeddings that interact with the integrated text-image embeddings. The prompt encoder is designed to understand the context and specific requirements of the query, enabling precise and context-aware responses【61†source】【63†source】.
+- **Text Decoder:** Based on the embeddings from the Multiway Transformer and the prompt encoder, the text decoder generates the relevant output. The decoder is trained to produce sequences of text and corresponding bounding boxes, effectively mapping answers to specific regions in the document. This allows the model to output not only textual answers but also their precise locations within the document, facilitating tasks such as information extraction and document navigation.
+
+#### Pre-training Strategy
+
+Our pre-training strategy employs three key objectives: Masked Language Modeling (MLM), Masked Image Modeling (MIM), and Word-Patch Alignment (WPA). These objectives, inspired by techniques in "LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking," are designed to enable the model to learn multimodal representations effectively.
+
+1. **Masked Language Modeling (MLM):**
+   - We mask 30% of text tokens using a span masking strategy, where span lengths follow a Poisson distribution. The objective is to maximize the log-likelihood of predicting the masked tokens based on the contextual representations from both text and image sequences. This helps the model learn the correspondence between textual content and layout information【45†source】.
+
+2. **Masked Image Modeling (MIM):**
+   - We mask approximately 40% of image tokens using a blockwise masking strategy. The model is then trained to reconstruct the masked tokens using a cross-entropy loss, encouraging it to interpret visual content through the context provided by both text and image tokens. This objective ensures the model captures high-level visual structures rather than low-level details【53†source】.
+
+3. **Word-Patch Alignment (WPA):**
+   - This objective aligns text words with their corresponding image patches. It involves predicting whether the image patches corresponding to a text word are masked. By assigning binary aligned/unaligned labels to unmasked text tokens based on their image patch masking status, the model learns a fine-grained alignment between text and image modalities. This is critical for tasks requiring precise text-image correspondence【45†source】.
+
+#### Fine-tuning Strategy
+
+For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond appropriately to a variety of prompts, which can be engineered to solve different downstream tasks. The fine-tuning process involves:
+- **Instruction Tuning the Text Decoder:** We fine-tune the text decoder to handle diverse downstream tasks by providing it with specific instructions on how to generate the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries. Instruction tuning allows the model to adapt to various tasks, enhancing its versatility and effectiveness【61†source】【63†source】.
+- **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in a zero-shot or few-shot setting. By carefully designing prompts, we can adapt the model to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training【61†source】【63†source】.
+
+This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
+
+---
+
+### Related Work
+
+The development of multi-modal foundation models has seen significant advancements in recent years, particularly in integrating text and image data to enhance various applications such as document analysis, information retrieval, and natural language processing.
+
+**BEIT and BEITv2:**
+The BEIT (Bao et al., 2022) and BEITv2 models introduced a new paradigm for image pre-training by leveraging masked image modeling (MIM) with visual tokenizers. BEITv2, in particular, improved this approach by using a visual tokenizer trained with a vector-quantized knowledge distillation (VQ-KD) method, allowing the model to capture more comprehensive visual representations by predicting CLIP embeddings for masked image patches【52†source】【53†source】.
+
+**LLM2Vec:**
+LLM2Vec demonstrated the capability of transforming decoder-only language models into powerful text encoders through masked next token prediction (MNTP) and unsupervised contrastive learning (SimCSE). This approach enabled the effective handling of structured text data, such as OCR outputs, by adapting the causal attention mechanism to a bidirectional one, thus improving contextual understanding【38†source】.
+
+**Multiway Transformer:**
+The Multiway Transformer architecture, as utilized in recent multi-modal models, provides a robust framework for integrating text and image embeddings. By incorporating shared self-attention modules and modality-specific feed-forward networks, this architecture facilitates deep fusion and processing of multi-modal data, enhancing the model's ability to handle complex interactions between different data types【44†source】.
+
+**LayoutLM and LayoutLMv3:**
+The LayoutLM series of models, particularly LayoutLMv3, have made significant contributions to pre-training strategies for document AI. These models use unified text-image multimodal transformers and employ objectives such as masked language modeling (MLM), masked image modeling (MIM), and word-patch alignment (WPA) to learn cross-modal representations. This approach ensures that the models can effectively capture the relationships between textual and visual elements in documents【45†source】.
+
+**Segment Anything Model (SAM):**
+The Segment Anything Model (SAM) introduces a prompt-based approach to segmentation tasks, enabling the model to respond to various prompts such as points, boxes, or masks. This flexibility allows SAM to perform well in zero-shot and few-shot settings, adapting to different segmentation tasks by engineering appropriate prompts. The methodology behind SAM highlights the potential of prompt engineering to generalize across multiple tasks, making it a versatile tool for segmentation and other interactive tasks【61†source】【62†source】【63†source】.
+
+Our proposed multi-modal foundation model builds upon these advancements by integrating a BEITv2-based image encoder, an LLM2Vec-based text encoder, and a Multiway Transformer for embedding fusion. Additionally, we incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks, leveraging instruction tuning to enhance the model's adaptability to various downstream applications.
+
+---
+
+### Experiments
+
+To evaluate the effectiveness of our proposed multi-modal foundation model, we conduct a series of experiments across different tasks, including pre-training, fine-tuning, and downstream task performance.
+
+**Pre-training Setup:**
+1. **Datasets:** We use the IDL-WDS and PDFA-ENG-WDS datasets for pre-training. These datasets provide a diverse collection of document images and corresponding OCR outputs, allowing the model to learn from various document types and structures.
+2. **Objectives:** The pre-training involves masked language modeling (MLM), masked image modeling (MIM), and word-patch alignment (WPA) objectives, ensuring the model captures comprehensive multimodal representations.
+3. **Evaluation Metrics:** We evaluate the model's performance on pre-training tasks using metrics such as cross-entropy loss for MLM and MIM, and binary cross-entropy loss for WPA.
+
+#### Fine-tuning Strategy
+
+For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond appropriately to a variety of prompts, which can be engineered to solve different downstream tasks. The fine-tuning process involves:
+- **Instruction Tuning the Text Decoder:** We fine-tune the text decoder to handle diverse downstream tasks by providing it with specific instructions on how to generate the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries. Instruction tuning allows the model to adapt to various tasks, enhancing its versatility and effectiveness【61†source】【63†source】.
+- **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in a zero-shot or few-shot setting. By carefully designing prompts, we can adapt the model to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training【61†source】【63†source】.
+
+This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
+
 Some questions:
 
 1. **Dataset:**
