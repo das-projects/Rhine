@@ -226,6 +226,51 @@ For fine-tuning, we adopt a prompt-based strategy inspired by methods described 
 
 This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
 
+### Evaluation Metrics for Pre-training and Fine-tuning
+
+To ensure the effectiveness and robustness of our multi-modal foundation model, we will employ a variety of evaluation metrics at different stages of pre-training and fine-tuning. These metrics will help assess the model’s performance comprehensively.
+
+#### Pre-training Evaluation Metrics
+
+1. **Image Encoder (BEITv2-based):**
+   - **Reconstruction Loss:** Measures how well the model reconstructs the masked image patches using the CLIP embeddings. This is typically evaluated using mean squared error (MSE) or cross-entropy loss.
+   - **Patch-wise Accuracy:** The accuracy of predicting the correct visual tokens for the masked patches.
+   - **Global Representation Quality:** Assessed using linear probing on a downstream image classification task (e.g., ImageNet), evaluating metrics such as top-1 and top-5 accuracy【52†source】【53†source】.
+
+2. **Text Encoder (LLM2Vec-based):**
+   - **Masked Language Modeling (MLM) Accuracy:** Measures the accuracy of predicting masked tokens in the text, evaluated using cross-entropy loss.
+   - **Perplexity:** A measure of how well the probability distribution predicted by the model aligns with the actual distribution of the data. Lower perplexity indicates a better language model.
+   - **Contrastive Learning Metrics:** For SimCSE, metrics like cosine similarity between positive pairs and the alignment and uniformity of the learned representations【38†source】.
+
+3. **Multiway Transformer Integration:**
+   - **Alignment Loss:** Measures how well the text and image embeddings are aligned, typically using cosine similarity or a similar metric.
+   - **Cross-modal Retrieval Accuracy:** Evaluates how accurately the model can retrieve relevant text given an image query, and vice versa, using metrics such as mean reciprocal rank (MRR) and normalized discounted cumulative gain (nDCG).
+
+#### Fine-tuning Evaluation Metrics
+
+1. **Prompt Encoder:**
+   - **Prompt Response Accuracy:** Measures how accurately the prompt encoder generates embeddings that lead to correct responses from the text decoder, evaluated using metrics specific to the downstream task (e.g., F1 score for classification tasks).
+   - **Prompt Response Time:** Evaluates the efficiency of the prompt encoder in generating prompt embeddings, measured in milliseconds.
+
+2. **Text Decoder:**
+   - **Sequence Generation Quality:** Assessed using metrics like BLEU, ROUGE, and METEOR, which measure the quality of generated text against reference text.
+   - **Bounding Box Accuracy:** Evaluates how accurately the model predicts bounding boxes, using metrics like Intersection over Union (IoU) and mean Average Precision (mAP).
+
+3. **Overall Model Performance:**
+   - **Task-specific Metrics:**
+     - **Document Layout Analysis:** Metrics like F1 score, precision, recall, and mean Average Precision (mAP) for detecting and classifying different layout components (e.g., text blocks, tables, figures).
+     - **Document Classification:** Accuracy, F1 score, precision, and recall for categorizing documents into predefined classes.
+     - **Named Entity Recognition (NER):** F1 score, precision, and recall for identifying and classifying named entities within the text.
+     - **Question Answering:** Exact match (EM) and F1 score for evaluating the correctness of answers generated in response to queries.
+
+#### Evaluation during Pre-training and Fine-tuning
+
+1. **Validation Loss:** Continuous monitoring of validation loss during pre-training and fine-tuning helps ensure that the model is not overfitting and generalizes well to unseen data.
+2. **Early Stopping Metrics:** Metrics like validation loss and early stopping criteria (based on patience and delta values) can help prevent overfitting during training.
+3. **Ablation Studies:** Conducting ablation studies to evaluate the impact of different components (e.g., removing the prompt encoder or text decoder) on overall performance.
+
+By utilizing these diverse evaluation metrics, we can comprehensively assess the performance and robustness of our multi-modal foundation model at each stage of pre-training and fine-tuning, ensuring its effectiveness across various downstream tasks.
+
 Some questions:
 
 1. **Dataset:**
