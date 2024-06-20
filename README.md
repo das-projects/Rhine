@@ -1207,19 +1207,22 @@ This comprehensive fine-tuning strategy ensures that the model remains flexible 
 The development of multi-modal foundation models has seen significant advancements in recent years, particularly in integrating text and image data to enhance various applications such as document analysis, information retrieval, and natural language processing.
 
 **BEIT and BEITv2:**
-The BEIT (Bao et al., 2022) and BEITv2 models introduced a new paradigm for image pre-training by leveraging masked image modeling (MIM) with visual tokenizers. BEITv2, in particular, improved this approach by using a visual tokenizer trained with a vector-quantized knowledge distillation (VQ-KD) method, allowing the model to capture more comprehensive visual representations by predicting CLIP embeddings for masked image patches【52†source】【53†source】.
+BEIT (Bao et al., 2022) introduced masked image modeling (MIM) with visual tokenizers for image pre-training. BEITv2 improved this approach by using a visual tokenizer trained with vector-quantized knowledge distillation (VQ-KD), capturing comprehensive visual representations by predicting CLIP embeddings for masked image patches.
 
 **LLM2Vec:**
-LLM2Vec demonstrated the capability of transforming decoder-only language models into powerful text encoders through masked next token prediction (MNTP) and unsupervised contrastive learning (SimCSE). This approach enabled the effective handling of structured text data, such as OCR outputs, by adapting the causal attention mechanism to a bidirectional one, thus improving contextual understanding【38†source】.
+LLM2Vec demonstrated the capability of transforming decoder-only language models into powerful text encoders through masked next token prediction (MNTP) and unsupervised contrastive learning (SimCSE). This adaptation enables effective handling of structured text data, such as OCR outputs, by converting causal attention to bidirectional, thus improving contextual understanding.
 
 **Multiway Transformer:**
-The Multiway Transformer architecture, as utilized in recent multi-modal models, provides a robust framework for integrating text and image embeddings. By incorporating shared self-attention modules and modality-specific feed-forward networks, this architecture facilitates deep fusion and processing of multi-modal data, enhancing the model's ability to handle complex interactions between different data types【44†source】.
+The Multiway Transformer architecture provides a robust framework for integrating text and image embeddings. By incorporating shared self-attention modules and modality-specific feed-forward networks, this architecture facilitates deep fusion and processing of multi-modal data, enhancing the model's ability to handle complex interactions between different data types.
 
 **LayoutLM and LayoutLMv3:**
-The LayoutLM series of models, particularly LayoutLMv3, have made significant contributions to pre-training strategies for document AI. These models use unified text-image multimodal transformers and employ objectives such as masked language modeling (MLM), masked image modeling (MIM), and word-patch alignment (WPA) to learn cross-modal representations. This approach ensures that the models can effectively capture the relationships between textual and visual elements in documents【45†source】.
+The LayoutLM series, particularly LayoutLMv3, contributed to pre-training strategies for document AI using unified text-image multimodal transformers. They employ objectives like masked language modeling (MLM), masked image modeling (MIM), and word-patch alignment (WPA) to learn cross-modal representations, effectively capturing relationships between textual and visual elements in documents.
 
 **Segment Anything Model (SAM):**
-The Segment Anything Model (SAM) introduces a prompt-based approach to segmentation tasks, enabling the model to respond to various prompts such as points, boxes, or masks. This flexibility allows SAM to perform well in zero-shot and few-shot settings, adapting to different segmentation tasks by engineering appropriate prompts. The methodology behind SAM highlights the potential of prompt engineering to generalize across multiple tasks, making it a versatile tool for segmentation and other interactive tasks【61†source】【62†source】【63†source】.
+The Segment Anything Model (SAM) introduces a prompt-based approach to segmentation tasks, enabling the model to respond to various prompts such as points, boxes, or masks. This flexibility allows SAM to perform well in zero-shot and few-shot settings, adapting to different segmentation tasks through prompt engineering.
+
+**LongLoRA:**
+LongLoRA extends the context size of pre-trained large language models (LLMs) efficiently. It combines shifted sparse attention (S2-Attn) and parameter-efficient fine-tuning to manage embeddings and normalization layers, allowing models like Llama2 to handle significantly larger context sizes without a proportional increase in computational resources.
 
 Our proposed multi-modal foundation model builds upon these advancements by integrating a BEITv2-based image encoder, an LLM2Vec-based text encoder, and a Multiway Transformer for embedding fusion. Additionally, we incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks, leveraging instruction tuning to enhance the model's adaptability to various downstream applications.
 
