@@ -448,6 +448,53 @@ The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama
 **Integration with Multiway Transformer:**
 To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images.
 
+```python
+import copy
+import torch
+import torch.nn as nn
+import pytorch_lightning as pl
+
+class MultiwayNetwork(pl.LightningModule):
+    def __init__(self, module, dim=1):
+        super().__init__()
+        self.dim = dim
+        self.A = module
+        self.B = copy.deepcopy(module)
+        self.B.reset_parameters()
+        self.split_position = -1
+
+    def forward(self, x, **kwargs):
+        if self.split_position == -1:
+            return self.A(x, **kwargs)
+        if self.split_position == 0:
+            return self.B(x, **kwargs)
+        x1, x2 = torch.split(
+            x,
+            [self.split_position, x.size(self.dim) - self.split_position],
+            dim=self.dim,
+        )
+        y1, y2 = self.A(x1, **kwargs), self.B(x2, **kwargs)
+        return torch.cat([y1, y2], dim=self.dim)
+
+class MultiwayEmbedding(MultiwayNetwork):
+    def __init__(self, modules, dim=1):
+        super().__init__(modules[0], dim=dim)
+        assert len(modules) == 2
+        self.A = modules[0]
+        self.B = modules[1]
+
+def MultiwayWrapper(args, module, dim=1):
+    if args.multiway:
+        return MultiwayNetwork(module, dim=dim)
+    return module
+
+def set_split_position(position):
+    def apply_fn(module):
+        if hasattr(module, "split_position"):
+            module.split_position = position
+    return apply_fn
+```
+
 **Positional Embeddings for Bounding Boxes:**
 We enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "GRPE: Relative Positional Encoding for Graph Transformer." This involves encoding the relative positional relationships between nodes in a graph, specifically tailored for OCR tasks. By embedding this spatial information directly into the transformer's self-attention mechanism, the model captures topological and edge-based relationships between textual elements in a document, improving its performance in tasks requiring an understanding of the document's visual and spatial context.
 
