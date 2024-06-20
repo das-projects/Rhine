@@ -14,25 +14,26 @@
 [![license](https://img.shields.io/badge/License-MIT-green.svg?labelColor=gray)](https://github.com/ashleve/lightning-hydra-template#license)
 [![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ashleve/lightning-hydra-template/pulls)
 
-
-A Promptable model for document classification and extraction  🚀⚡🔥<br>
+A Promptable model for document classification and extraction 🚀⚡🔥<br>
 
 </div>
-
 
 ### Outline
 
 1. **Introduction**
+
    - Background and motivation
    - Problem statement
    - Summary of contributions
 
 2. **Related Work**
+
    - Review of BEIT, BEITv2, CLIP, LLM2Vec, Llama3, and Mistral
    - Existing multi-modal foundation models
    - Positioning of your work in the context of these models
 
 3. **Methodology**
+
    - **Datasets**
      - Description of pre-training datasets: IDL-WDS, PDFA-ENG-WDS
      - Description of fine-tuning and evaluation datasets: PubTables-1M, PubLayNet
@@ -49,17 +50,20 @@ A Promptable model for document classification and extraction  🚀⚡🔥<br>
      - Prompt-based fine-tuning for downstream tasks
 
 4. **Experiments**
+
    - Experimental setup
    - Metrics for evaluation
    - Baseline models for comparison
 
 5. **Results**
+
    - Performance on pre-training tasks
    - Performance on downstream tasks
    - Comparison with baselines
    - Analysis and discussion
 
 6. **Conclusion**
+
    - Summary of findings
    - Implications of the results
    - Future work and open questions
@@ -85,6 +89,7 @@ Our pre-training strategy involves three key objectives: Masked Language Modelin
 Our proposed model aims to provide a unified representation that can be used for various downstream tasks, such as document classification, named entity recognition, and document layout analysis. We evaluate our model on several benchmark datasets, including PubTables-1M and PubLayNet, demonstrating its superior performance compared to existing state-of-the-art methods.
 
 Our contributions can be summarized as follows:
+
 1. We introduce a novel multi-modal foundation model that integrates image and text data using a Multiway Transformer architecture.
 2. We leverage the BEITv2 approach to pre-train the image encoder with CLIP embeddings, enhancing its semantic understanding.
 3. We adapt a pre-trained LLM for text encoding using the LLM2Vec approach, optimizing it for OCR JSON input.
@@ -123,6 +128,7 @@ The PDFA-ENG-WDS dataset focuses on English PDF documents and provides OCR annot
 The PubTables-1M dataset is designed for table detection and structure recognition within documents, offering an extensive collection of annotated data to pre-train and fine-tune models for layout analysis and table structure extraction tasks.
 
 - **Size and Composition:** The dataset includes approximately 947,642 cropped table instances and 575,305 document page instances, providing comprehensive annotations for both table structure and document layout:
+
   - **Structure Recognition Data:** Includes images and annotations for train, test, and validation sets, with XML files detailing table structures and word bounding boxes.
   - **Detection Data:** Contains images and annotations for detecting table locations within full document pages, along with word-level bounding box information.
 
@@ -135,6 +141,7 @@ The PubTables-1M dataset is designed for table detection and structure recogniti
 PubLayNet is a large-scale dataset aimed at document layout analysis, including annotations for text, titles, lists, tables, and figures within research paper images. This dataset is particularly valuable for pre-training and fine-tuning models for tasks such as document classification and named entity recognition.
 
 - **Size and Composition:** PubLayNet contains over 1 million annotated document images, sourced from PubMed Central articles. The dataset includes detailed annotations for various layout components:
+
   - **Annotations:** The dataset provides bounding boxes and labels for text blocks, titles, lists, tables, and figures. It is divided into training, validation, and test splits:
     - **Training Set:** Approximately 335,703 images
     - **Validation Set:** Approximately 11,245 images
@@ -445,6 +452,433 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
 **Text Encoder:**
 The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama3 or Mistral, adapted using the LLM2Vec approach. This process includes enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The goal is to transform a decoder-only LLM into a strong text encoder. The steps involve fine-tuning the model to predict masked tokens and using dropout techniques to create positive examples for contrastive learning. This adaptation is crucial for handling the structured nature of OCR outputs, as described in "LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders."
 
+````python
+import json
+import logging
+import os
+from functools import partial
+from typing import Dict, List, Optional, Union
+
+import numpy as np
+import torch
+import torch.multiprocessing as mp
+from peft import PeftModel
+from torch import Tensor, device, nn
+from tqdm.autonotebook import trange
+from transformers import (
+    AutoModel,
+    AutoConfig,
+    AutoTokenizer,
+    LlamaConfig,
+    MistralConfig,
+)
+
+from .models import (
+    MistralBiModel,
+    LlamaBiModel,
+    GemmaBiModel,
+)
+import pytorch_lightning as pl
+
+logger = logging.getLogger(__name__)
+
+def batch_to_device(batch, target_device: device):
+    for key in batch:
+        if isinstance(batch[key], Tensor):
+            batch[key] = batch[key].to(target_device)
+    return batch
+
+class LLM2Vec(pl.LightningModule):
+    def __init__(
+        self,
+        model: AutoModel,
+        tokenizer: AutoTokenizer,
+        pooling_mode: str = "mean",
+        max_length: int = 512,
+        doc_max_length: int = 400,
+        skip_instruction: bool = True,
+    ):
+        super().__init__()
+        self.model = model
+        self.tokenizer = tokenizer
+        self.pooling_mode = pooling_mode
+        self.skip_instruction = skip_instruction
+        self.max_length = max_length
+        self.doc_max_length = doc_max_length
+        self.config = model.config
+
+    @classmethod
+    def _get_model_class(cls, config_class_name, enable_bidirectional):
+        if not enable_bidirectional:
+            return AutoModel
+        if config_class_name == "MistralConfig":
+            return MistralBiModel
+        elif config_class_name == "LlamaConfig":
+            return LlamaBiModel
+        elif config_class_name == "GemmaConfig":
+            return GemmaBiModel
+        else:
+            raise ValueError(
+                f"{config_class_name} is not supported yet with bidirectional models."
+            )
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        base_model_name_or_path,
+        peft_model_name_or_path=None,
+        merge_peft=False,
+        enable_bidirectional=True,
+        **kwargs,
+    ):
+        keys = ["pooling_mode", "max_length", "doc_max_length", "skip_instruction"]
+        encoder_args = {
+            key: kwargs.pop(key, None) for key in keys if kwargs.get(key) is not None
+        }
+
+        tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path)
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "left"
+
+        config = AutoConfig.from_pretrained(base_model_name_or_path)
+        config_class_name = config.__class__.__name__
+
+        model_class = cls._get_model_class(
+            config_class_name, enable_bidirectional=enable_bidirectional
+        )
+        model = model_class.from_pretrained(base_model_name_or_path, **kwargs)
+
+        if hasattr(model, "peft_config"):
+            model = PeftModel.from_pretrained(
+                model,
+                base_model_name_or_path,
+            )
+            model = model.merge_and_unload()
+
+        if peft_model_name_or_path is not None:
+            model = PeftModel.from_pretrained(
+                model,
+                peft_model_name_or_path,
+            )
+            if merge_peft:
+                model = model.merge_and_unload()
+
+        config = {}
+        config_addr = (
+            peft_model_name_or_path
+            if peft_model_name_or_path is not None
+            else base_model_name_or_path
+        )
+        if os.path.exists(f"{config_addr}/llm2vec_config.json"):
+            with open(f"{config_addr}/llm2vec_config.json", "r") as fIn:
+                llm2vec_config = json.load(fIn)
+            config.update(llm2vec_config)
+
+        for key, value in encoder_args.items():
+            config[key] = value
+
+        return cls(model=model, tokenizer=tokenizer, **config)
+
+    def prepare_for_tokenization(self, text):
+        if self.model.config._name_or_path == "meta-llama/Meta-Llama-3-8B-Instruct":
+            text = (
+                "user\n\n"
+                + text.strip()
+                + ""
+            )
+            return text
+        if self.model.config._name_or_path in [
+            "mistralai/Mistral-7B-Instruct-v0.2",
+            "meta-llama/Llama-2-7b-chat-hf",
+        ]:
+            text = "[INST] " + text.strip() + " [/INST]"
+        if self.pooling_mode == "eos_token":
+            if self.model.config._name_or_path == "meta-llama/Meta-Llama-3-8B":
+                text = text.strip() + ""
+            elif isinstance(self.model.config, LlamaConfig) or isinstance(
+                self.model.config, MistralConfig
+            ):
+                text = text.strip() + " </s>"
+
+        return text
+
+    def tokenize(self, texts):
+        texts_2 = []
+        original_texts = []
+        for text in texts:
+            t = text.split("!@#$%^&*()")
+            texts_2.append(t[1] if len(t) > 1 else "")
+            original_texts.append("".join(t))
+
+        original = self.tokenizer(
+            original_texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+        )
+        embed_mask = None
+        for t_i, t in enumerate(texts_2):
+            ids = self.tokenizer(
+                [t],
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_length,
+                add_special_tokens=False,
+            )
+            if embed_mask is None:
+                e_m = torch.zeros_like(original["attention_mask"][t_i])
+                if len(ids["input_ids"][0]) > 0:
+                    e_m[-len(ids["input_ids"][0]) :] = torch.ones(
+                        len(ids["input_ids"][0])
+                    )
+                embed_mask = e_m.unsqueeze(0)
+            else:
+                e_m = torch.zeros_like(original["attention_mask"][t_i])
+                if len(ids["input_ids"][0]) > 0:
+                    e_m[-len(ids["input_ids"][0]) :] = torch.ones(
+                        len(ids["input_ids"][0])
+                    )
+                embed_mask = torch.cat((embed_mask, e_m.unsqueeze(0)), dim=0)
+
+        original["embed_mask"] = embed_mask
+        return original
+
+    def _skip_instruction(self, sentence_feature):
+        assert (
+            sentence_feature["attention_mask"].shape
+            == sentence_feature["embed_mask"].shape
+        )
+        sentence_feature["attention_mask"] = sentence_feature["embed_mask"]
+
+    def forward(self, sentence_feature: Dict[str, Tensor]):
+        embed_mask = None
+        if "embed_mask" in sentence_feature:
+            embed_mask = sentence_feature.pop("embed_mask")
+        reps = self.model(**sentence_feature)
+        sentence_feature["embed_mask"] = embed_mask
+
+        return self.get_pooling(sentence_feature, reps.last_hidden_state)
+
+    def get_pooling(self, features, last_hidden_states):
+        assert (
+            self.tokenizer.padding_side == "left"
+        ), "Pooling modes are implemented for padding from left."
+        if self.skip_instruction:
+            self._skip_instruction(features)
+        seq_lengths = features["attention_mask"].sum(dim=-1)
+        if self.pooling_mode == "mean":
+            return torch.stack(
+                [
+                    last_hidden_states[i, -length:, :].mean(dim=0)
+                    for i, length in enumerate(seq_lengths)
+                ],
+                dim=0,
+            )
+        elif self.pooling_mode == "weighted_mean":
+            bs, l, _ = last_hidden_states.shape
+            complete_weights = torch.zeros(bs, l, device=last_hidden_states.device)
+            for i, seq_l in enumerate(seq_lengths):
+                if seq_l > 0:
+                    complete_weights[i, -seq_l:] = torch.arange(seq_l) + 1
+                    complete_weights[i] /= torch.clamp(
+                        complete_weights[i].sum(), min=1e-9
+                    )
+            return torch.sum(last_hidden_states * complete_weights.unsqueeze(-1), dim=1)
+        elif self.pooling_mode == "eos_token" or self.pooling_mode == "last_token":
+            return last_hidden_states[:, -1]
+        elif self.pooling_mode == "bos_token":
+            return last_hidden_states[
+                features["input_ids"] == self.tokenizer.bos_token_id
+            ]
+        else:
+            raise ValueError(f"{self.pooling_mode} is not implemented yet.")
+
+    def _convert_to_str(self, instruction, text):
+        tokenized_q = self.tokenizer(
+            text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+            add_special_tokens=False,
+        )
+        tokenized_q_length = len(tokenized_q["input_ids"][0])
+
+        while tokenized_q_length > self.doc_max_length:
+            reduction_ratio = self.doc_max_length / tokenized_q_length
+            reduced_length = int(len(text.split()) * reduction_ratio)
+            text = " ".join(text.split()[:reduced_length])
+            tokenized_q = self.tokenizer(
+                text,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_length,
+                add_special_tokens=False,
+            )
+            tokenized_q_length = len(tokenized_q["input_ids"][0])
+
+        return f"{instruction.strip()} !@#$%^&*(){text}"
+
+    def encode(
+        self,
+        sentences: Union[str, List[str]],
+        batch_size: int = 32,
+        show_progress_bar: bool = True,
+        convert_to_numpy: bool = False,
+        convert_to_tensor: bool = False,
+        device: Optional[str] = None,
+    ):
+        if isinstance(sentences[0], str) and isinstance(sentences[-1], int):
+            sentences = [sentences]
+        if isinstance(sentences[0], str):
+            sentences = [[""] + [sentence] for sentence in sentences]
+
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        concatenated_input_texts = []
+        for sentence in sentences:
+            assert isinstance(sentence[0], str)
+            assert isinstance(sentence[1], str)
+            concatenated_input_texts.append(
+                self._convert_to_str(sentence[0], sentence[1])
+            )
+        sentences = concatenated_input_texts
+
+        self.eval()
+
+        if convert_to_tensor:
+            convert_to_numpy = False
+
+        length_sorted_idx = np.argsort([-self._text_length(sen) for sen in sentences])
+        sentences_sorted = [sentences[idx] for idx in length_sorted_idx]
+        all_embeddings = []
+
+        if torch.cuda.device_count() <= 1:
+            self.to(device)
+            for start_index in trange(
+                0,
+                len(sentences),
+                batch_size,
+                desc="Batches",
+                disable=not show_progress_bar,
+            ):
+                sentences_batch = sentences_sorted[
+                    start_index : start_index + batch_size
+                ]
+                embeddings = self._encode(
+                    sentences_batch, device=device, convert_to_numpy=convert_to_numpy
+                )
+                all_embeddings.append(embeddings)
+        else:
+            num_proc = torch.cuda.device_count()
+            cuda_compatible_multiprocess = mp.get_context("spawn")
+            with cuda_compatible_multiprocess.Pool(num_proc) as p:
+                sentences_batches = [
+                    sentences_sorted[start_index : start_index + batch_size]
+                    for start_index in trange(0, len(sentences), batch_size)
+                ]
+                for result in p.map(
+                    partial(
+                        self._encode,
+                        device=None,
+                        convert_to_numpy=convert_to_numpy,
+                        multiprocessing=True,
+                    ),
+                    sentences_batches,
+                ):
+                    all_embeddings.append(result)
+
+        all_embeddings = torch.cat(all_embeddings, dim=0)
+        all_embeddings = all_embeddings[np.argsort(length_sorted_idx)]
+        all_embeddings = all_embeddings.to(torch.float32)
+        if convert_to_numpy:
+            all_embeddings = np.asarray([emb.numpy() for emb in all_embeddings])
+        return all_embeddings
+
+    def save(self, output_path, merge_before_save=False, save_config=True):
+        if merge_before_save and isinstance(self.model, PeftModel):
+            self.model = self.model.merge_and_unload()
+            if hasattr(self.model, "_hf_peft_config_loaded"):
+                self.model._hf_peft_config_loaded = False
+
+        self.model.save_pretrained(output_path)
+        self.tokenizer.save_pretrained(output_path)
+
+        llm2vec_config = {
+            "pooling_mode": self.pooling_mode,
+            "max_length": self.max_length,
+            "doc_max_length": self.doc_max_length,
+            "skip_instruction": self.skip_instruction,
+        }
+
+        if save_config:
+            os.makedirs(output_path, exist_ok=True)
+            with open(f"{output_path}/llm2vec_config.json", "w") as fOut:
+                json.dump(llm2vec_config, fOut, indent=4)
+
+    def _encode(self, sentences_batch, device: Optional[str] = None, convert_to_numpy: bool = False, multiprocessing=False):
+        if multiprocessing:
+            rank = mp.current_process()._identity[0]
+            if device is None and torch.cuda.is_available():
+                device = f"cuda:{rank % torch.cuda.device_count()}"
+
+        self.to(device)
+        features = self.tokenize(
+            [self.prepare_for_tokenization(sentence) for sentence in sentences_batch]
+        )
+        features = batch_to_device(features, device)
+
+        with torch.no_grad():
+            embeddings = self.forward(features)
+            embeddings = embeddings.detach()
+            embeddings = embeddings.cpu()
+
+        return embeddings
+
+    def _text_length(self, text: Union[List[int], List[List[int]]]):
+        if (
+            isinstance(text, str)
+            or (isinstance(text, list) and isinstance(text[0], int))
+            or len(text) == 0
+        ):
+            return len(text)
+        if isinstance(text, dict):
+            return len(next(iter(text.values())))
+        elif not hasattr(text, "__len__"):
+            return 1
+        else:
+            return sum([len(t) for t in text])
+
+    def resize_token_embeddings(
+        self,
+        new_num_tokens: Optional[int] = None,
+        pad_to_multiple_of: Optional[int] = None,
+    ) -> nn.Embedding:
+        return self.model.resize_token_embeddings(
+            new_num_tokens=new_num_tokens, pad_to_multiple_of=pad_to_multiple_of
+        )
+
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        self.model.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs=gradient_checkpointing_kwargs
+        )
+
+    def training_step(self, batch, batch_idx):
+        features, labels = batch
+        outputs = self(features)
+        loss = nn.CrossEntropyLoss()(outputs, labels)
+        self.log("train_loss", loss)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
+        return optimizer
+````
+
 **Integration with Multiway Transformer:**
 To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images.
 
@@ -500,6 +934,7 @@ We enhance the positional embeddings to incorporate the spatial information of O
 
 **Prompt Encoder and Text Decoder:**
 After integrating the image and text embeddings using the Multiway Transformer, we incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks:
+
 - **Prompt Encoder:** This component processes user prompts, converting them into embeddings that interact with the integrated text-image embeddings. The prompt encoder is designed to understand the context and specific requirements of the query, enabling precise and context-aware responses【61†source】【63†source】.
 - **Text Decoder:** Based on the embeddings from the Multiway Transformer and the prompt encoder, the text decoder generates the relevant output. The decoder is trained to produce sequences of text and corresponding bounding boxes, effectively mapping answers to specific regions in the document. This allows the model to output not only textual answers but also their precise locations within the document, facilitating tasks such as information extraction and document navigation.
 
@@ -508,9 +943,11 @@ After integrating the image and text embeddings using the Multiway Transformer, 
 Our pre-training strategy employs three key objectives: Masked Language Modeling (MLM), Masked Image Modeling (MIM), and Word-Patch Alignment (WPA). These objectives, inspired by techniques in "LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking," are designed to enable the model to learn multimodal representations effectively.
 
 1. **Masked Language Modeling (MLM):**
+
    - We mask 30% of text tokens using a span masking strategy, where span lengths follow a Poisson distribution. The objective is to maximize the log-likelihood of predicting the masked tokens based on the contextual representations from both text and image sequences. This helps the model learn the correspondence between textual content and layout information.
 
 2. **Masked Image Modeling (MIM):**
+
    - We mask approximately 40% of image tokens using a blockwise masking strategy. The model is then trained to reconstruct the masked tokens using a cross-entropy loss, encouraging it to interpret visual content through the context provided by both text and image tokens. This objective ensures the model captures high-level visual structures rather than low-level details.
 
 3. **Word-Patch Alignment (WPA):**
@@ -519,11 +956,11 @@ Our pre-training strategy employs three key objectives: Masked Language Modeling
 #### Fine-tuning Strategy
 
 For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond appropriately to a variety of prompts, which can be engineered to solve different downstream tasks. The fine-tuning process involves:
+
 - **Instruction Tuning the Text Decoder:** We fine-tune the text decoder to handle diverse downstream tasks by providing it with specific instructions on how to generate the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries【61†source】【63†source】.
 - **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in a zero-shot or few-shot setting. By carefully designing prompts, we can adapt the model to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training【61†source】【63†source】.
 
 This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
-
 
 ### Methodology
 
@@ -543,6 +980,7 @@ We enhance the positional embeddings to incorporate the spatial information of O
 
 **Prompt Encoder and Text Decoder:**
 After integrating the image and text embeddings using the Multiway Transformer, we incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks:
+
 - **Prompt Encoder:** This component processes user prompts, converting them into embeddings that interact with the integrated text-image embeddings. The prompt encoder is designed to understand the context and specific requirements of the query, enabling precise and context-aware responses【61†source】【63†source】.
 - **Text Decoder:** Based on the embeddings from the Multiway Transformer and the prompt encoder, the text decoder generates the relevant output. The decoder is trained to produce sequences of text and corresponding bounding boxes, effectively mapping answers to specific regions in the document. This allows the model to output not only textual answers but also their precise locations within the document, facilitating tasks such as information extraction and document navigation.
 
@@ -551,9 +989,11 @@ After integrating the image and text embeddings using the Multiway Transformer, 
 Our pre-training strategy employs three key objectives: Masked Language Modeling (MLM), Masked Image Modeling (MIM), and Word-Patch Alignment (WPA). These objectives, inspired by techniques in "LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking," are designed to enable the model to learn multimodal representations effectively.
 
 1. **Masked Language Modeling (MLM):**
+
    - We mask 30% of text tokens using a span masking strategy, where span lengths follow a Poisson distribution. The objective is to maximize the log-likelihood of predicting the masked tokens based on the contextual representations from both text and image sequences. This helps the model learn the correspondence between textual content and layout information【45†source】.
 
 2. **Masked Image Modeling (MIM):**
+
    - We mask approximately 40% of image tokens using a blockwise masking strategy. The model is then trained to reconstruct the masked tokens using a cross-entropy loss, encouraging it to interpret visual content through the context provided by both text and image tokens. This objective ensures the model captures high-level visual structures rather than low-level details【53†source】.
 
 3. **Word-Patch Alignment (WPA):**
@@ -562,6 +1002,7 @@ Our pre-training strategy employs three key objectives: Masked Language Modeling
 #### Fine-tuning Strategy
 
 For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond appropriately to a variety of prompts, which can be engineered to solve different downstream tasks. The fine-tuning process involves:
+
 - **Instruction Tuning the Text Decoder:** We fine-tune the text decoder to handle diverse downstream tasks by providing it with specific instructions on how to generate the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries. Instruction tuning allows the model to adapt to various tasks, enhancing its versatility and effectiveness【61†source】【63†source】.
 - **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in a zero-shot or few-shot setting. By carefully designing prompts, we can adapt the model to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training【61†source】【63†source】.
 
@@ -597,6 +1038,7 @@ Our proposed multi-modal foundation model builds upon these advancements by inte
 To evaluate the effectiveness of our proposed multi-modal foundation model, we conduct a series of experiments across different tasks, including pre-training, fine-tuning, and downstream task performance.
 
 **Pre-training Setup:**
+
 1. **Datasets:** We use the IDL-WDS and PDFA-ENG-WDS datasets for pre-training. These datasets provide a diverse collection of document images and corresponding OCR outputs, allowing the model to learn from various document types and structures.
 2. **Objectives:** The pre-training involves masked language modeling (MLM), masked image modeling (MIM), and word-patch alignment (WPA) objectives, ensuring the model captures comprehensive multimodal representations.
 3. **Evaluation Metrics:** We evaluate the model's performance on pre-training tasks using metrics such as cross-entropy loss for MLM and MIM, and binary cross-entropy loss for WPA.
@@ -604,6 +1046,7 @@ To evaluate the effectiveness of our proposed multi-modal foundation model, we c
 #### Fine-tuning Strategy
 
 For fine-tuning, we adopt a prompt-based strategy inspired by methods described in the Segment Anything Model (SAM). This approach enables the model to respond appropriately to a variety of prompts, which can be engineered to solve different downstream tasks. The fine-tuning process involves:
+
 - **Instruction Tuning the Text Decoder:** We fine-tune the text decoder to handle diverse downstream tasks by providing it with specific instructions on how to generate the relevant output. This includes producing text sequences and identifying the corresponding bounding boxes in response to different types of queries. Instruction tuning allows the model to adapt to various tasks, enhancing its versatility and effectiveness【61†source】【63†source】.
 - **Zero-Shot and Few-Shot Learning:** The prompt-based strategy leverages the model’s pre-trained capabilities to perform tasks in a zero-shot or few-shot setting. By carefully designing prompts, we can adapt the model to various applications such as document layout analysis, document classification, and named entity recognition without extensive additional training【61†source】【63†source】.
 
@@ -616,11 +1059,13 @@ To ensure the effectiveness and robustness of our multi-modal foundation model, 
 #### Pre-training Evaluation Metrics
 
 1. **Image Encoder (BEITv2-based):**
+
    - **Reconstruction Loss:** Measures how well the model reconstructs the masked image patches using the CLIP embeddings. This is typically evaluated using mean squared error (MSE) or cross-entropy loss.
    - **Patch-wise Accuracy:** The accuracy of predicting the correct visual tokens for the masked patches.
    - **Global Representation Quality:** Assessed using linear probing on a downstream image classification task (e.g., ImageNet), evaluating metrics such as top-1 and top-5 accuracy【52†source】【53†source】.
 
 2. **Text Encoder (LLM2Vec-based):**
+
    - **Masked Language Modeling (MLM) Accuracy:** Measures the accuracy of predicting masked tokens in the text, evaluated using cross-entropy loss.
    - **Perplexity:** A measure of how well the probability distribution predicted by the model aligns with the actual distribution of the data. Lower perplexity indicates a better language model.
    - **Contrastive Learning Metrics:** For SimCSE, metrics like cosine similarity between positive pairs and the alignment and uniformity of the learned representations【38†source】.
@@ -632,10 +1077,12 @@ To ensure the effectiveness and robustness of our multi-modal foundation model, 
 #### Fine-tuning Evaluation Metrics
 
 1. **Prompt Encoder:**
+
    - **Prompt Response Accuracy:** Measures how accurately the prompt encoder generates embeddings that lead to correct responses from the text decoder, evaluated using metrics specific to the downstream task (e.g., F1 score for classification tasks).
    - **Prompt Response Time:** Evaluates the efficiency of the prompt encoder in generating prompt embeddings, measured in milliseconds.
 
 2. **Text Decoder:**
+
    - **Sequence Generation Quality:** Assessed using metrics like BLEU, ROUGE, and METEOR, which measure the quality of generated text against reference text.
    - **Bounding Box Accuracy:** Evaluates how accurately the model predicts bounding boxes, using metrics like Intersection over Union (IoU) and mean Average Precision (mAP).
 
@@ -657,25 +1104,31 @@ By utilizing these diverse evaluation metrics, we can comprehensively assess the
 Some questions:
 
 1. **Dataset:**
+
    - Do you have a specific dataset you plan to use for pre-training and finetuning? If so, could you provide details about it?
    - Are there any specific datasets you plan to use for evaluating downstream tasks like document classification or named entity recognition?
 
 2. **Model Details:**
+
    - Could you provide more details on how you plan to integrate the text and image embeddings through the cross-attention layer?
    - What specific modifications will you apply to the LLM to accommodate the OCR JSON format?
 
 3. **Pre-training and Finetuning:**
+
    - What is your strategy for pre-training the model? How will you mask the image patches and text tokens?
    - How will you handle the finetuning process for the downstream tasks?
 
 4. **Evaluation:**
+
    - What metrics will you use to evaluate the performance of your model on the pre-training tasks (masked language and image modeling)?
    - What metrics will you use for the downstream tasks?
 
 5. **Baseline Comparisons:**
+
    - Do you have any baseline models for comparison? If so, what are they, and how will you compare their performance with your proposed model?
 
 6. **Expected Contributions:**
+
    - What are the key contributions of your work? How does it advance the state-of-the-art in multi-modal foundation models?
 
 7. **Challenges and Limitations:**
