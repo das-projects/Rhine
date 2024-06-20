@@ -1298,37 +1298,4 @@ To ensure the effectiveness and robustness of our multi-modal foundation model, 
 
 By utilizing these diverse evaluation metrics, we can comprehensively assess the performance and robustness of our multi-modal foundation model at each stage of pre-training and fine-tuning, ensuring its effectiveness across various downstream tasks.
 
-Some questions:
-
-1. **Dataset:**
-
-   - Do you have a specific dataset you plan to use for pre-training and finetuning? If so, could you provide details about it?
-   - Are there any specific datasets you plan to use for evaluating downstream tasks like document classification or named entity recognition?
-
-2. **Model Details:**
-
-   - Could you provide more details on how you plan to integrate the text and image embeddings through the cross-attention layer?
-   - What specific modifications will you apply to the LLM to accommodate the OCR JSON format?
-
-3. **Pre-training and Finetuning:**
-
-   - What is your strategy for pre-training the model? How will you mask the image patches and text tokens?
-   - How will you handle the finetuning process for the downstream tasks?
-
-4. **Evaluation:**
-
-   - What metrics will you use to evaluate the performance of your model on the pre-training tasks (masked language and image modeling)?
-   - What metrics will you use for the downstream tasks?
-
-5. **Baseline Comparisons:**
-
-   - Do you have any baseline models for comparison? If so, what are they, and how will you compare their performance with your proposed model?
-
-6. **Expected Contributions:**
-
-   - What are the key contributions of your work? How does it advance the state-of-the-art in multi-modal foundation models?
-
-7. **Challenges and Limitations:**
-   - Are there any specific challenges or limitations you anticipate with your approach? How do you plan to address or mitigate them?
-
 ---
