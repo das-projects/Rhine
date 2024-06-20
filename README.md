@@ -15,7 +15,7 @@
 [![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ashleve/lightning-hydra-template/pulls)
 
 
-A clean template to kickstart your deep learning project 🚀⚡🔥<br>
+A Promptable model for document classification and extraction  🚀⚡🔥<br>
 
 </div>
 
