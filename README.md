@@ -1254,21 +1254,21 @@ This comprehensive fine-tuning strategy ensures that the model remains flexible 
 
 ### Evaluation Metrics for Pre-training and Fine-tuning
 
-To ensure the effectiveness and robustness of our multi-modal foundation model, we will employ a variety of evaluation metrics at different stages of pre-training and fine-tuning. These metrics will help assess the model’s performance comprehensively.
+To ensure the effectiveness and robustness of our multi-modal foundation model, we employ a variety of evaluation metrics at different stages of pre-training and fine-tuning. These metrics comprehensively assess the model’s performance.
 
 #### Pre-training Evaluation Metrics
 
 1. **Image Encoder (BEITv2-based):**
 
-   - **Reconstruction Loss:** Measures how well the model reconstructs the masked image patches using the CLIP embeddings. This is typically evaluated using mean squared error (MSE) or cross-entropy loss.
-   - **Patch-wise Accuracy:** The accuracy of predicting the correct visual tokens for the masked patches.
-   - **Global Representation Quality:** Assessed using linear probing on a downstream image classification task (e.g., ImageNet), evaluating metrics such as top-1 and top-5 accuracy【52†source】【53†source】.
+   - **Reconstruction Loss:** Measures how well the model reconstructs masked image patches using CLIP embeddings, typically evaluated using mean squared error (MSE) or cross-entropy loss.
+   - **Patch-wise Accuracy:** The accuracy of predicting correct visual tokens for the masked patches.
+   - **Global Representation Quality:** Assessed using linear probing on a downstream image classification task (e.g., ImageNet), evaluating metrics such as top-1 and top-5 accuracy.
 
 2. **Text Encoder (LLM2Vec-based):**
 
    - **Masked Language Modeling (MLM) Accuracy:** Measures the accuracy of predicting masked tokens in the text, evaluated using cross-entropy loss.
    - **Perplexity:** A measure of how well the probability distribution predicted by the model aligns with the actual distribution of the data. Lower perplexity indicates a better language model.
-   - **Contrastive Learning Metrics:** For SimCSE, metrics like cosine similarity between positive pairs and the alignment and uniformity of the learned representations【38†source】.
+   - **Contrastive Learning Metrics:** For SimCSE, metrics like cosine similarity between positive pairs and the alignment and uniformity of the learned representations.
 
 3. **Multiway Transformer Integration:**
    - **Alignment Loss:** Measures how well the text and image embeddings are aligned, typically using cosine similarity or a similar metric.
@@ -1322,10 +1322,10 @@ Training and fine-tuning a multi-modal foundation model, particularly with large
 #### Software Requirements
 
 1. **Frameworks**: PyTorch for deep learning, with PyTorch Lightning to streamline the training and fine-tuning process.
-2. **Libraries**: 
-    - Hugging Face Transformers for model implementations and tokenizers.
-    - CUDA and cuDNN for GPU acceleration.
-    - Apex for mixed precision training to optimize performance and memory usage.
+2. **Libraries**:
+   - Hugging Face Transformers for model implementations and tokenizers.
+   - CUDA and cuDNN for GPU acceleration.
+   - Apex for mixed precision training to optimize performance and memory usage.
 3. **Data Management**: LitData library for efficient data loading and preprocessing, particularly useful for handling large datasets.
 
 #### Training and Fine-Tuning Environment
@@ -1338,16 +1338,18 @@ Training and fine-tuning a multi-modal foundation model, particularly with large
 ### Summary of Training and Fine-Tuning Process
 
 1. **Pre-training**:
-    - Utilize large datasets (IDL-WDS with approximately 70 million pages and PDFa-eng-WDS with extensive document images and text pairs) to pre-train the image encoder with BEITv2 and the text encoder with LLM2Vec.
-    - Implement LongLoRA for efficient context extension, which is crucial given the extended context requirements of up to 100k tokens for Llama2 7B and 32k tokens for Llama2 70B.
+
+   - Utilize large datasets (IDL-WDS with approximately 70 million pages and PDFa-eng-WDS with extensive document images and text pairs) to pre-train the image encoder with BEITv2 and the text encoder with LLM2Vec.
+   - Implement LongLoRA for efficient context extension, which is crucial given the extended context requirements of up to 100k tokens for Llama2 7B and 32k tokens for Llama2 70B.
 
 2. **Fine-Tuning**:
-    - Apply a prompt-based fine-tuning strategy inspired by SAM.
-    - Fine-tune on specific datasets like PubTables-1M and PubLayNet, which provide high-quality annotated data for tasks such as document layout analysis and entity recognition.
-    - Instruction tune the text decoder to handle diverse downstream tasks and respond to various prompts, ensuring robust and flexible performance.
+
+   - Apply a prompt-based fine-tuning strategy inspired by SAM.
+   - Fine-tune on specific datasets like PubTables-1M and PubLayNet, which provide high-quality annotated data for tasks such as document layout analysis and entity recognition.
+   - Instruction tune the text decoder to handle diverse downstream tasks and respond to various prompts, ensuring robust and flexible performance.
 
 3. **Evaluation**:
-    - Continuously evaluate the model's performance using benchmarks and iteratively refine prompts and tuning parameters.
-    - Implement zero-shot and few-shot learning to assess model adaptability and performance on unseen tasks, leveraging the model's extensive pre-training and fine-tuning.
+   - Continuously evaluate the model's performance using benchmarks and iteratively refine prompts and tuning parameters.
+   - Implement zero-shot and few-shot learning to assess model adaptability and performance on unseen tasks, leveraging the model's extensive pre-training and fine-tuning.
 
 By following this comprehensive setup, the training and fine-tuning processes are optimized to handle the complexity and scale of the multi-modal foundation model, ensuring robust performance across various applications.
