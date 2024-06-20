@@ -97,17 +97,44 @@ This research advances the state-of-the-art in multi-modal foundation models, pr
 
 ### Methodology
 
-#### Datasets
+### Datasets for Pre-training and Fine-tuning
 
-**Pre-training Datasets:**
-1. **IDL-WDS**: This dataset comprises a diverse collection of document images paired with OCR outputs in JSON format. Each JSON file contains text and corresponding bounding boxes, structured to facilitate the training of models in reading and understanding document layouts. The dataset includes approximately 7,000 rows, offering substantial data for robust pre-training. The documents are processed to determine reading order and columnar structure, enhancing the model's ability to handle complex document formats【11†source】【12†source】.
+#### Pre-training Datasets
 
-2. **PDFA-ENG-WDS**: Derived from the SafeDocs corpus, this dataset focuses on English PDF documents, providing OCR annotations and bounding boxes for words within the documents. It includes metadata such as file sizes and rendering times to optimize loading and processing during training. This dataset, totaling around 1.5TB, is filtered to ensure data quality and consistency, making it ideal for training vision-language models【13†source】【14†source】【15†source】.
+**IDL-WDS:**
+The IDL-WDS (Industry Documents Library - Web Dataset) comprises a large-scale collection of document images paired with OCR outputs in JSON format, designed for robust pre-training of document processing models.
 
-**Fine-tuning and Evaluation Datasets:**
-1. **PubTables-1M**: This dataset is designed for table detection and structure recognition in documents. It includes extensive annotations for table structures within a large number of document images, making it suitable for evaluating and fine-tuning models for layout detection tasks.
+- **Size and Composition:** The dataset contains approximately 19 million pages, providing extensive coverage of various document types and structures. The documents include PDF files, TIFF images, JSON files with Textract OCR annotations, and OCR files with plain text.
+- **Processing:**
+  - **Image Preprocessing:** Convert all images to a consistent resolution and format (e.g., 224x224 pixels, PNG) to ensure uniformity.
+  - **OCR JSON Parsing:** Parse the JSON files to extract word bounding boxes and corresponding text. Normalize bounding box coordinates relative to the image size.
+  - **Dataloader Implementation:** Use libraries like `torchvision` for image handling and `json` for parsing. Implement a dataloader that reads the image and corresponding JSON file, normalizes the data, and batches them efficiently. Sharded storage and streaming support (using `webdataset` or `datasets` libraries) can optimize loading times and memory usage, particularly for large-scale datasets【86†source】【87†source】【88†source】.
 
-2. **PubLayNet**: PubLayNet provides annotated document images for layout analysis, including text, tables, figures, and headers. The dataset is valuable for tasks like document classification and named entity recognition, offering a rich source of labeled data for fine-tuning multi-modal models.
+**PDFA-ENG-WDS:**
+The PDFA-ENG-WDS dataset focuses on English PDF documents, offering OCR annotations and bounding boxes for words within the documents.
+
+- **Size and Composition:** The dataset spans approximately 1.5TB, with over 26 million pages and 18 billion text tokens. Metadata such as file sizes and rendering times are included to optimize loading and processing during training.
+- **Processing:**
+  - **Sharded Storage:** The dataset is stored in `.tar` files, compatible with the `webdataset` library for efficient streaming and processing.
+  - **Text and Bounding Box Extraction:** Each document is paired with a JSON file containing words and their bounding boxes. Normalize these coordinates and convert text to a suitable format for model input.
+  - **Optimized Dataloader:** Utilize libraries like `webdataset` and `chug` for efficient loading of large, sharded datasets. This approach supports parallel processing and efficient handling of large-scale data【80†source】.
+
+#### Fine-tuning and Evaluation Datasets
+
+**PubTables-1M:**
+Designed for table detection and structure recognition in documents, this dataset includes extensive annotations for table structures within a large number of document images, making it suitable for evaluating and fine-tuning models for layout detection tasks.
+
+**PubLayNet:**
+PubLayNet provides annotated document images for layout analysis, including text, tables, figures, and headers. It is valuable for tasks like document classification and named entity recognition, offering a rich source of labeled data for fine-tuning multi-modal models.
+
+### Datasets Summary and Processing Strategy
+
+- **Consistency:** Standardize image resolutions and formats to ensure uniform input data for the model.
+- **Normalization:** Normalize bounding box coordinates and other spatial data relative to image dimensions to maintain consistency across samples.
+- **Efficient Loading:** Use optimized libraries like `torchvision` for image processing, `json` for annotation parsing, and `webdataset` for handling large, sharded datasets. This ensures efficient data loading and processing, reducing bottlenecks during training.
+- **Metadata Utilization:** Leverage metadata such as file sizes and rendering times to filter out excessively large or slow-to-render files, optimizing the dataset for efficient training at scale.
+
+By following these strategies, we can build an efficient dataloader that handles the complexity and scale of these datasets, ensuring smooth pre-training and fine-tuning processes for our multi-modal foundation model.
 
 #### Model Architecture
 
