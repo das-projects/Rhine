@@ -70,20 +70,28 @@ A Promptable model for document classification and extraction  🚀⚡🔥<br>
 
 ### Introduction
 
-In recent years, there has been significant progress in the development of foundation models that can process and understand multi-modal data, such as images and text. These models have shown great promise in various applications, including document analysis, information retrieval, and natural language processing. However, existing approaches often rely on separate encoders for images and text, which limits their ability to fully leverage the interactions between different modalities.
+In recent years, there has been significant progress in the development of foundation models capable of processing and understanding multi-modal data, such as images and text. These models have shown great promise in various applications, including document analysis, information retrieval, and natural language processing. However, existing approaches often rely on separate encoders for images and text, which limits their ability to fully leverage the interactions between different modalities.
 
-In this paper, we propose a novel multi-modal foundation model that integrates image and text data at a deeper level. Our model accepts an image of a document and its corresponding OCR output in JSON format, which includes a list of tuples of words and their bounding boxes. The image encoder is based on the Vision Transformer (VIT) model, pre-trained using a method inspired by BEITv2. Instead of generating image patches directly, our model generates CLIP embeddings of these patches, leveraging the rich semantic information captured by CLIP.
+In this paper, we propose a novel multi-modal foundation model that integrates image and text data at a deeper level. Our model accepts an image of a document and its corresponding OCR output in JSON format, which includes a list of tuples of words and their bounding boxes. The image encoder is based on the Vision Transformer (ViT) model, pre-trained using the BEITv2 approach. Instead of generating image patches directly, our model predicts the CLIP embeddings of these patches, leveraging the rich semantic information captured by CLIP. This approach enhances the model's understanding of the visual content in documents, ensuring robust and high-level visual representations【52†source】【53†source】.
 
-The text encoder is derived from a pre-trained Large Language Model (LLM) such as Llama3 or Mistral. We modify the causal attention layer to bi-directional attention, following the approach in LLM2Vec, and finetune the model for next token prediction on a dataset formatted in JSON OCR. The embeddings from the text and image encoders are then passed through a multiway transformer, allowing for a more intricate fusion of multi-modal information. Additionally, we adjust the positional embeddings to incorporate the bounding box information of the OCR tokens, as described in recent advancements in transformer architectures.
+The text encoder is derived from a pre-trained Large Language Model (LLM) such as Llama3 or Mistral, adapted using the LLM2Vec approach. This involves enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The adaptation from a decoder-only LLM to a strong text encoder allows the model to handle the structured nature of OCR outputs effectively, capturing the contextual and semantic nuances of the text【38†source】.
 
-Our proposed model aims to provide a unified representation that can be used for various downstream tasks, such as document classification and named entity recognition. We evaluate our model on several benchmark datasets, including PubTables-1M and PubLayNet, and demonstrate its superior performance compared to existing state-of-the-art methods.
+To fuse the text and image embeddings, we employ a Multiway Transformer architecture. This architecture integrates a shared self-attention module and modality-specific feed-forward networks, facilitating deep fusion and processing of multi-modal data. Additionally, we enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "GRPE: Relative Positional Encoding for Graph Transformer," ensuring the model captures the document's layout and structure accurately【44†source】【45†source】.
+
+Further, we integrate a prompt encoder and a text decoder to enable interactive document analysis and question-answering tasks. The prompt encoder processes user prompts, converting them into embeddings that interact with the integrated text-image embeddings. The text decoder generates the relevant output based on these embeddings, producing sequences of text and corresponding bounding boxes, which map answers to specific regions in the document. This design facilitates tasks such as information extraction and document navigation【61†source】【63†source】.
+
+Our pre-training strategy involves three key objectives: Masked Language Modeling (MLM), Masked Image Modeling (MIM), and Word-Patch Alignment (WPA). These objectives are inspired by techniques from "LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking," and are designed to enable the model to learn comprehensive multimodal representations effectively. We employ a prompt-based fine-tuning strategy, leveraging instruction tuning to adapt the model to various downstream tasks in a zero-shot or few-shot setting【45†source】【53†source】【61†source】【63†source】.
+
+Our proposed model aims to provide a unified representation that can be used for various downstream tasks, such as document classification, named entity recognition, and document layout analysis. We evaluate our model on several benchmark datasets, including PubTables-1M and PubLayNet, demonstrating its superior performance compared to existing state-of-the-art methods.
 
 Our contributions can be summarized as follows:
-1. We introduce a novel multi-modal foundation model that integrates image and text data using cross-attention mechanisms.
+1. We introduce a novel multi-modal foundation model that integrates image and text data using a Multiway Transformer architecture.
 2. We leverage the BEITv2 approach to pre-train the image encoder with CLIP embeddings, enhancing its semantic understanding.
-3. We adapt a pre-trained LLM for text encoding, optimizing it for OCR JSON input.
-4. We jointly pre-train the model on masked language and image modeling tasks, demonstrating its effectiveness on various downstream applications.
-5. We utilize prompt-based fine-tuning to enable zero-shot or few-shot performance on diverse document analysis tasks.
+3. We adapt a pre-trained LLM for text encoding using the LLM2Vec approach, optimizing it for OCR JSON input.
+4. We incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks.
+5. We employ a comprehensive pre-training and fine-tuning strategy, demonstrating the model's effectiveness across various downstream applications.
+
+This research advances the state-of-the-art in multi-modal foundation models, providing a robust and flexible framework for document analysis and related tasks.
 
 ---
 
