@@ -18,7 +18,7 @@ A Promptable model for document classification and extraction 🚀⚡🔥<br>
 
 </div>
 
-### Outline
+## Outline
 
 1. **Introduction**
 
@@ -72,7 +72,7 @@ A Promptable model for document classification and extraction 🚀⚡🔥<br>
 
 ---
 
-### Introduction
+## Introduction
 
 The rapid advancement in large language models (LLMs) has opened new possibilities for handling complex, multi-modal data. In this paper, we introduce a multi-modal foundation model capable of processing both document images and their Optical Character Recognition (OCR) outputs in JSON format. Our model integrates advanced text and image encoders, incorporating techniques from BEITv2, LLM2Vec, and LongLoRA to handle extended contexts and efficiently process structured information.
 
@@ -102,7 +102,7 @@ By integrating these advancements, our multi-modal foundation model is equipped 
 
 ---
 
-### Methodology
+## Methodology
 
 ### Datasets for Pre-training and Fine-tuning
 
@@ -246,9 +246,9 @@ for batch in dataloader:
     print(images.shape, annotations)
 ```
 
-#### Model Architecture
+## Model Architecture
 
-**Image Encoder:**
+### Image Encoder:
 The image encoder in our model is based on the Vision Transformer (ViT) model, pre-trained using the BEITv2 approach. BEITv2 leverages a visual tokenizer to convert images into discrete visual tokens, enabling masked image modeling (MIM). Specifically, approximately 40% of image patches are masked, and the model is trained to predict the CLIP embeddings of these masked patches. This technique ensures that the model captures high-level visual representations and is robust in understanding the visual content in documents. The pretraining also involves a [CLS] token to aggregate patch information into global representations, enhancing the model’s ability to generate comprehensive visual embeddings【52†source】【53†source】.
 
 ```python
@@ -450,8 +450,6 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
         model.load_state_dict(checkpoint["model"])
     return model
 ```
-
-Here's the updated section with the additional information:
 
 ### Text Encoder
 
@@ -969,7 +967,7 @@ class LLM2Vec(pl.LightningModule):
         return optimizer
 ```
 
-### Integration with Multiway Transformer:
+### Integration with Multiway Transformer
 
 To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images.
 
@@ -1020,9 +1018,9 @@ def set_split_position(position):
     return apply_fn
 ```
 
-### Positional Embeddings for Bounding Boxes:
+### Positional Embeddings for Bounding Boxes
 
-We enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "GRPE: Relative Positional Encoding for Graph Transformer." This involves encoding the relative positional relationships between nodes in a graph, specifically tailored for OCR tasks. By embedding this spatial information directly into the transformer's self-attention mechanism, the model captures topological and edge-based relationships between textual elements in a document, improving its performance in tasks requiring an understanding of the document's visual and spatial context.
+We enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "Learnable Fourier Features for Multi-Dimensional Spatial Positional Encoding." This involves encoding the bounding box coordinates using learnable Fourier features, which capture the spatial relationships between tokens. By embedding this spatial information directly into the transformer's self-attention mechanism, the model effectively captures the topological and spatial relationships between textual elements in a document, thereby improving its performance in tasks that require an understanding of the document's visual and spatial context.
 
 ### Prompt Encoder
 
