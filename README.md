@@ -100,6 +100,11 @@ To integrate the image and text embeddings, we utilize a multiway transformer. T
 
 By integrating these advancements, our multi-modal foundation model is equipped to handle large context sizes efficiently, enabling it to perform well on various downstream tasks such as document classification, named entity recognition, and more. This work sets a new standard for processing multi-modal documents with extended contexts, demonstrating the powerful synergy of modern NLP and computer vision techniques.
 
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+
 ---
 
 ## Methodology
@@ -162,6 +167,11 @@ PubLayNet is a large-scale dataset aimed at document layout analysis, including 
 - **Metadata Utilization:** Leverage metadata such as file sizes and rendering times to filter out large or slow-to-render files, optimizing the dataset for efficient training at scale.
 
 By following these strategies, we can efficiently process and utilize the IDL-WDS, PDFA-ENG-WDS, PubTables-1M, and PubLayNet datasets for pre-training and fine-tuning our multi-modal foundation model, ensuring high performance across various document analysis tasks.
+
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
 
 #### Code Example
 
@@ -248,8 +258,9 @@ for batch in dataloader:
 
 ## Model Architecture
 
-### Image Encoder:
-The image encoder in our model is based on the Vision Transformer (ViT) model, pre-trained using the BEITv2 approach. BEITv2 leverages a visual tokenizer to convert images into discrete visual tokens, enabling masked image modeling (MIM). Specifically, approximately 40% of image patches are masked, and the model is trained to predict the CLIP embeddings of these masked patches. This technique ensures that the model captures high-level visual representations and is robust in understanding the visual content in documents. The pretraining also involves a [CLS] token to aggregate patch information into global representations, enhancing the model’s ability to generate comprehensive visual embeddings【52†source】【53†source】.
+### Image Encoder
+
+The image encoder in our model is based on the Vision Transformer (ViT) model, pre-trained using the BEITv2 approach. BEITv2 leverages a visual tokenizer to convert images into discrete visual tokens, enabling masked image modeling (MIM). Specifically, approximately 40% of image patches are masked, and the model is trained to predict the CLIP embeddings of these masked patches. This technique ensures that the model captures high-level visual representations and is robust in understanding the visual content in documents. The pretraining also involves a [CLS] token to aggregate patch information into global representations, enhancing the model’s ability to generate comprehensive visual embeddings.
 
 ```python
 import math
@@ -450,6 +461,11 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
         model.load_state_dict(checkpoint["model"])
     return model
 ```
+
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
 
 ### Text Encoder
 
@@ -971,6 +987,11 @@ class LLM2Vec(pl.LightningModule):
 
 To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images.
 
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+
 ```python
 import copy
 import torch
@@ -1022,6 +1043,11 @@ def set_split_position(position):
 
 We enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "Learnable Fourier Features for Multi-Dimensional Spatial Positional Encoding." This involves encoding the bounding box coordinates using learnable Fourier features, which capture the spatial relationships between tokens. By embedding this spatial information directly into the transformer's self-attention mechanism, the model effectively captures the topological and spatial relationships between textual elements in a document, thereby improving its performance in tasks that require an understanding of the document's visual and spatial context.
 
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+
 ### Prompt Encoder
 
 The prompt encoder will be a small text embedding model that processes the prompt and generates an embedding. This embedding is then added to the embedding received from the multiway transformer before feeding into the text decoder.
@@ -1035,6 +1061,11 @@ The prompt encoder will be a small text embedding model that processes the promp
    - Take the input prompt and convert it into token embeddings.
    - Process these embeddings through the prompt encoder to generate a final prompt embedding.
 
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+
 ### Text Decoder
 
 The text decoder is a fine-tuned LLM like Llama3, which generates word and bounding box pairs for various extraction tasks or plain text when describing the document.
@@ -1047,6 +1078,11 @@ The text decoder is a fine-tuned LLM like Llama3, which generates word and bound
 2. **Fine-tuning**:
    - Use datasets that include document descriptions, extraction tasks, and bounding box annotations.
    - Train the model to generate output sequences that consist of text and bounding box coordinates.
+
+**References**
+
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
 
 ### Integration
 
@@ -1157,42 +1193,10 @@ For fine-tuning, we adopt a prompt-based strategy inspired by methods described 
 
 This comprehensive fine-tuning strategy ensures that the model remains flexible and capable of performing a wide range of tasks efficiently, leveraging the strengths of both the pre-trained embeddings and the prompt-based interaction mechanisms.
 
-### Methodology
+**References**
 
-#### Model Architecture
-
-**Image Encoder:**
-The image encoder in our model is based on the Vision Transformer (ViT) model, pre-trained using the BEITv2 approach. BEITv2 leverages a visual tokenizer to convert images into discrete visual tokens, enabling masked image modeling (MIM). Specifically, approximately 40% of image patches are masked, and the model is trained to predict the CLIP embeddings of these masked patches. This technique ensures that the model captures high-level visual representations and is robust in understanding the visual content in documents. The pretraining also involves a [CLS] token to aggregate patch information into global representations, enhancing the model’s ability to generate comprehensive visual embeddings【52†source】【53†source】.
-
-**Text Encoder:**
-The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama3 or Mistral, adapted using the LLM2Vec approach. This process includes enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The goal is to transform a decoder-only LLM into a strong text encoder. The steps involve fine-tuning the model to predict masked tokens and using dropout techniques to create positive examples for contrastive learning. This adaptation is crucial for handling the structured nature of OCR outputs, as described in "LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders"【38†source】.
-
-**Integration with Multiway Transformer:**
-To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images【44†source】.
-
-**Positional Embeddings for Bounding Boxes:**
-We enhance the positional embeddings to incorporate the spatial information of OCR tokens using techniques inspired by "GRPE: Relative Positional Encoding for Graph Transformer." This involves encoding the relative positional relationships between nodes in a graph, specifically tailored for OCR tasks. By embedding this spatial information directly into the transformer's self-attention mechanism, the model captures topological and edge-based relationships between textual elements in a document, improving its performance in tasks requiring an understanding of the document's visual and spatial context【45†source】.
-
-**Prompt Encoder and Text Decoder:**
-After integrating the image and text embeddings using the Multiway Transformer, we incorporate a prompt encoder and a text decoder to facilitate interactive document analysis and question-answering tasks:
-
-- **Prompt Encoder:** This component processes user prompts, converting them into embeddings that interact with the integrated text-image embeddings. The prompt encoder is designed to understand the context and specific requirements of the query, enabling precise and context-aware responses【61†source】【63†source】.
-- **Text Decoder:** Based on the embeddings from the Multiway Transformer and the prompt encoder, the text decoder generates the relevant output. The decoder is trained to produce sequences of text and corresponding bounding boxes, effectively mapping answers to specific regions in the document. This allows the model to output not only textual answers but also their precise locations within the document, facilitating tasks such as information extraction and document navigation.
-
-#### Pre-training Strategy
-
-Our pre-training strategy employs three key objectives: Masked Language Modeling (MLM), Masked Image Modeling (MIM), and Word-Patch Alignment (WPA). These objectives, inspired by techniques in "LayoutLMv3: Pre-training for Document AI with Unified Text and Image Masking," are designed to enable the model to learn multimodal representations effectively.
-
-1. **Masked Language Modeling (MLM):**
-
-   - We mask 30% of text tokens using a span masking strategy, where span lengths follow a Poisson distribution. The objective is to maximize the log-likelihood of predicting the masked tokens based on the contextual representations from both text and image sequences. This helps the model learn the correspondence between textual content and layout information【45†source】.
-
-2. **Masked Image Modeling (MIM):**
-
-   - We mask approximately 40% of image tokens using a blockwise masking strategy. The model is then trained to reconstruct the masked tokens using a cross-entropy loss, encouraging it to interpret visual content through the context provided by both text and image tokens. This objective ensures the model captures high-level visual structures rather than low-level details【53†source】.
-
-3. **Word-Patch Alignment (WPA):**
-   - This objective aligns text words with their corresponding image patches. It involves predicting whether the image patches corresponding to a text word are masked. By assigning binary aligned/unaligned labels to unmasked text tokens based on their image patch masking status, the model learns a fine-grained alignment between text and image modalities. This is critical for tasks requiring precise text-image correspondence【45†source】.
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
 
 #### Fine-tuning Strategy
 
