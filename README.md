@@ -99,7 +99,7 @@ This research advances the state-of-the-art in multi-modal foundation models, pr
 
 ### Datasets for Pre-training and Fine-tuning
 
-#### Pre-training Datasets
+#### Pre-training and Fine-tuning Datasets
 
 **IDL-WDS:**
 The IDL-WDS (Industry Documents Library - Web Dataset) is a comprehensive dataset comprising around 19 million pages of document images and corresponding OCR outputs in JSON format. This dataset is designed to facilitate robust pre-training of models on a diverse range of document types and structures.
@@ -118,6 +118,41 @@ The PDFA-ENG-WDS dataset focuses on English PDF documents and provides OCR annot
   - **Sharded Storage:** The dataset is stored in `.tar` files, compatible with efficient streaming and processing using the `litdata` library.
   - **Text and Bounding Box Extraction:** Normalize the bounding box coordinates relative to the 1024x1024 image size and convert the text to a suitable format for model input.
   - **Optimized Dataloader with LitData:** Utilize the `litdata` library for efficient loading of large, sharded datasets, supporting parallel processing and handling large-scale data effectively.
+
+**PubTables-1M:**
+The PubTables-1M dataset is designed for table detection and structure recognition within documents, offering an extensive collection of annotated data to pre-train and fine-tune models for layout analysis and table structure extraction tasks.
+
+- **Size and Composition:** The dataset includes approximately 947,642 cropped table instances and 575,305 document page instances, providing comprehensive annotations for both table structure and document layout:
+  - **Structure Recognition Data:** Includes images and annotations for train, test, and validation sets, with XML files detailing table structures and word bounding boxes.
+  - **Detection Data:** Contains images and annotations for detecting table locations within full document pages, along with word-level bounding box information.
+
+- **Processing and Loading:**
+  - **Download and Extraction:** Use provided scripts to download and organize the dataset.
+  - **Transformation:** Standardize images to 1024x1024 pixels and normalize bounding box coordinates relative to this size.
+  - **Dataloader Implementation with LitData:** Utilize the `litdata` library to efficiently load, transform, and batch the data.
+
+**PubLayNet:**
+PubLayNet is a large-scale dataset aimed at document layout analysis, including annotations for text, titles, lists, tables, and figures within research paper images. This dataset is particularly valuable for pre-training and fine-tuning models for tasks such as document classification and named entity recognition.
+
+- **Size and Composition:** PubLayNet contains over 1 million annotated document images, sourced from PubMed Central articles. The dataset includes detailed annotations for various layout components:
+  - **Annotations:** The dataset provides bounding boxes and labels for text blocks, titles, lists, tables, and figures. It is divided into training, validation, and test splits:
+    - **Training Set:** Approximately 335,703 images
+    - **Validation Set:** Approximately 11,245 images
+    - **Test Set:** Approximately 11,405 images
+
+- **Processing and Loading:**
+  - **Download and Extraction:** Access the dataset files via Hugging Face, ensuring all necessary files are downloaded.
+  - **Transformation:** Convert images to 1024x1024 pixels, and normalize the bounding boxes relative to this size for consistency.
+  - **Dataloader Implementation with LitData:** Use the `litdata` library to handle large-scale data efficiently, with capabilities for shuffling, batching, and parallel processing.
+
+### Datasets Summary and Processing Strategy
+
+- **Consistency:** Standardize image resolutions to 1024x1024 pixels and convert them to TIFF format to ensure high-quality, uniform input data.
+- **Normalization:** Normalize bounding box coordinates in the OCR JSON files relative to the 1024x1024 image dimensions.
+- **Efficient Loading:** Use the `litdata` library for data processing, `torchvision` for image handling, and efficient methods for managing large, sharded datasets. This ensures efficient data loading and processing, reducing bottlenecks during training.
+- **Metadata Utilization:** Leverage metadata such as file sizes and rendering times to filter out large or slow-to-render files, optimizing the dataset for efficient training at scale.
+
+By following these strategies, we can efficiently process and utilize the IDL-WDS, PDFA-ENG-WDS, PubTables-1M, and PubLayNet datasets for pre-training and fine-tuning our multi-modal foundation model, ensuring high performance across various document analysis tasks.
 
 #### Code Example
 
@@ -201,45 +236,6 @@ for batch in dataloader:
     images, annotations = batch
     print(images.shape, annotations)
 ```
-
-### Fine-tuning and Evaluation Datasets
-
-#### PubTables-1M
-
-The PubTables-1M dataset is designed for table detection and structure recognition within documents, offering an extensive collection of annotated data to fine-tune models for layout analysis and table structure extraction tasks.
-
-- **Size and Composition:** The dataset includes approximately 947,642 cropped table instances and 575,305 document page instances. It provides comprehensive annotations for both table structure and document layout:
-  - **Structure Recognition Data:** Includes images and annotations for train, test, and validation sets, with XML files detailing table structures and word bounding boxes.
-  - **Detection Data:** Contains images and annotations for detecting table locations within full document pages, along with word-level bounding box information.
-
-- **Processing and Loading:**
-  - **Download and Extraction:** Use provided scripts to download and organize the dataset.
-  - **Transformation:** Standardize images to 1024x1024 pixels and normalize bounding box coordinates relative to this size.
-  - **Dataloader Implementation with LitData:** Utilize the `litdata` library to efficiently load, transform, and batch the data.
-
-#### PubLayNet
-
-PubLayNet is a large-scale dataset aimed at document layout analysis, including annotations for text, titles, lists, tables, and figures within research paper images. This dataset is particularly valuable for tasks such as document classification and named entity recognition.
-
-- **Size and Composition:** PubLayNet contains over 1 million annotated document images, sourced from PubMed Central articles. The dataset includes detailed annotations for various layout components:
-  - **Annotations:** The dataset provides bounding boxes and labels for text blocks, titles, lists, tables, and figures. It is divided into training, validation, and test splits:
-    - **Training Set:** Approximately 335,703 images
-    - **Validation Set:** Approximately 11,245 images
-    - **Test Set:** Approximately 11,405 images
-
-- **Processing and Loading:**
-  - **Download and Extraction:** Access the dataset files via Hugging Face, ensuring all necessary files are downloaded.
-  - **Transformation:** Convert images to 1024x1024 pixels, and normalize the bounding boxes relative to this size for consistency.
-  - **Dataloader Implementation with LitData:** Use the `litdata` library to handle large-scale data efficiently, with capabilities for shuffling, batching, and parallel processing.
-
-### Datasets Summary and Processing Strategy
-
-- **Consistency:** Standardize image resolutions to 1024x1024 pixels and convert them to TIFF format to ensure high-quality, uniform input data.
-- **Normalization:** Normalize bounding box coordinates in the OCR JSON files relative to the 1024x1024 image dimensions.
-- **Efficient Loading:** Use the `litdata` library for data processing, `torchvision` for image handling, and efficient methods for managing large, sharded datasets. This ensures efficient data loading and processing, reducing bottlenecks during training.
-- **Metadata Utilization:** Leverage metadata such as file sizes and rendering times to filter out large or slow-to-render files, optimizing the dataset for efficient training at scale.
-
-By following these strategies, we can efficiently process and utilize the PubTables-1M and PubLayNet datasets for fine-tuning our multi-modal foundation model, ensuring high performance across various document analysis tasks.
 
 #### Model Architecture
 
