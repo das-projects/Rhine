@@ -19,7 +19,7 @@ A Promptable model for document classification and extraction 🚀⚡🔥<br>
 
 # A Foundational Model for Intelligent Document Processing
 
-**Dr Arijit Das**
+**Dr Arijit Das, ERGO Group AG**
 
 ## Outline
 
@@ -58,20 +58,26 @@ A Promptable model for document classification and extraction 🚀⚡🔥<br>
    - Metrics for evaluation
    - Baseline models for comparison
 
-5. **Results**
+5. **Infrastructure for Training and Fine-Tuning**
+
+   - Hardware Requirements
+   - Software Requirements
+   - Tooling for Reproducible Model Development
+
+6. **Results**
 
    - Performance on pre-training tasks
    - Performance on downstream tasks
    - Comparison with baselines
    - Analysis and discussion
 
-6. **Conclusion**
+7. **Conclusion**
 
    - Summary of findings
    - Implications of the results
    - Future work and open questions
 
-7. **References**
+8. **References**
 
 ---
 
@@ -1334,12 +1340,23 @@ Training and fine-tuning a multi-modal foundation model, particularly with large
    - Apex for mixed precision training to optimize performance and memory usage.
 3. **Data Management**: LitData library for efficient data loading and preprocessing, particularly useful for handling large datasets.
 
-### Training and Fine-Tuning Environment
+#### Training and Fine-Tuning Environment
 
 1. **Distributed Training**: Utilize distributed training strategies, such as data parallelism and model parallelism, to efficiently leverage multiple GPUs.
 2. **Mixed Precision Training**: Use mixed precision training to reduce the memory footprint and increase computational speed, crucial for handling large models like Llama3-8B.
 3. **Hyperparameter Tuning**: Implement automated hyperparameter tuning frameworks (e.g., Optuna or Ray Tune) to optimize model performance.
 4. **Monitoring and Logging**: Set up robust monitoring and logging systems (e.g., TensorBoard, Weights & Biases) to track training progress and performance metrics.
+
+### Tooling for Reproducible Model Development
+
+Ensuring reproducibility in model development is crucial for validating results and facilitating collaboration. The following tools and practices are recommended:
+
+1. **Version Control**: Use Git for version control of code, configuration files, and documentation. Maintain clear commit messages and branching strategies (e.g., GitFlow).
+2. **Environment Management**: Use Docker to create isolated and reproducible environments. Document the dependencies and environment setup steps in a `Dockerfile` or `docker-compose.yml`.
+3. **Experiment Tracking**: Utilize tools like MLflow or Weights & Biases to track experiments, including hyperparameters, training configurations, and results. This ensures that all experiment details are recorded and can be reproduced.
+4. **Automated Testing**: Implement automated tests for different components of the model pipeline using frameworks like pytest. This includes unit tests, integration tests, and regression tests to ensure that changes do not introduce errors.
+5. **Continuous Integration/Continuous Deployment (CI/CD)**: Set up CI/CD pipelines using tools like GitHub Actions or Jenkins to automate testing, building, and deploying models. This ensures that every change is automatically tested and can be deployed consistently.
+6. **Documentation**: Maintain comprehensive documentation for the codebase, including installation instructions, usage examples, and API references. Tools like Sphinx can help generate documentation from docstrings and comments in the code.
 
 ### Summary of Training and Fine-Tuning Process
 
