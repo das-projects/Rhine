@@ -1231,7 +1231,7 @@ Our proposed multi-modal foundation model builds upon these advancements by inte
 
 ---
 
-### Experiments
+## Experiments
 
 To evaluate the effectiveness of our proposed multi-modal foundation model, we conduct a series of experiments across different tasks, including pre-training, fine-tuning, and downstream task performance.
 
@@ -1259,7 +1259,7 @@ This comprehensive fine-tuning strategy ensures that the model remains flexible 
 
 To ensure the effectiveness and robustness of our multi-modal foundation model, we employ a variety of evaluation metrics at different stages of pre-training and fine-tuning. These metrics comprehensively assess the model’s performance.
 
-#### Pre-training Evaluation Metrics
+### Pre-training Evaluation Metrics
 
 1. **Image Encoder (BEITv2-based):**
 
@@ -1277,7 +1277,7 @@ To ensure the effectiveness and robustness of our multi-modal foundation model, 
    - **Alignment Loss:** Measures how well the text and image embeddings are aligned, typically using cosine similarity or a similar metric.
    - **Cross-modal Retrieval Accuracy:** Evaluates how accurately the model can retrieve relevant text given an image query, and vice versa, using metrics such as mean reciprocal rank (MRR) and normalized discounted cumulative gain (nDCG).
 
-#### Fine-tuning Evaluation Metrics
+### Fine-tuning Evaluation Metrics
 
 1. **Prompt Encoder:**
 
@@ -1296,7 +1296,7 @@ To ensure the effectiveness and robustness of our multi-modal foundation model, 
      - **Named Entity Recognition (NER):** F1 score, precision, and recall for identifying and classifying named entities within the text.
      - **Question Answering:** Exact match (EM) and F1 score for evaluating the correctness of answers generated in response to queries.
 
-#### Evaluation during Pre-training and Fine-tuning
+### Evaluation during Pre-training and Fine-tuning
 
 1. **Validation Loss:** Continuous monitoring of validation loss during pre-training and fine-tuning helps ensure that the model is not overfitting and generalizes well to unseen data.
 2. **Early Stopping Metrics:** Metrics like validation loss and early stopping criteria (based on patience and delta values) can help prevent overfitting during training.
@@ -1331,7 +1331,7 @@ Training and fine-tuning a multi-modal foundation model, particularly with large
    - Apex for mixed precision training to optimize performance and memory usage.
 3. **Data Management**: LitData library for efficient data loading and preprocessing, particularly useful for handling large datasets.
 
-#### Training and Fine-Tuning Environment
+### Training and Fine-Tuning Environment
 
 1. **Distributed Training**: Utilize distributed training strategies, such as data parallelism and model parallelism, to efficiently leverage multiple GPUs.
 2. **Mixed Precision Training**: Use mixed precision training to reduce the memory footprint and increase computational speed, crucial for handling large models like Llama3-8B.
