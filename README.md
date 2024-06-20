@@ -452,7 +452,7 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
 **Text Encoder:**
 The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama3 or Mistral, adapted using the LLM2Vec approach. This process includes enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The goal is to transform a decoder-only LLM into a strong text encoder. The steps involve fine-tuning the model to predict masked tokens and using dropout techniques to create positive examples for contrastive learning. This adaptation is crucial for handling the structured nature of OCR outputs, as described in "LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders."
 
-````python
+```python
 import json
 import logging
 import os
@@ -472,13 +472,13 @@ from transformers import (
     LlamaConfig,
     MistralConfig,
 )
+import pytorch_lightning as pl
 
 from .models import (
     MistralBiModel,
     LlamaBiModel,
     GemmaBiModel,
 )
-import pytorch_lightning as pl
 
 logger = logging.getLogger(__name__)
 
@@ -508,6 +508,32 @@ class LearnableFourierPositionalEncoding(nn.Module):
         pos_encodings = torch.cat([torch.sin(fourier_features), torch.cos(fourier_features)], dim=-1)
         return pos_encodings
 
+class ShiftedSparseAttention(nn.Module):
+    def __init__(self, block_size=128, shift_size=64):
+        super().__init__()
+        self.block_size = block_size
+        self.shift_size = shift_size
+
+    def forward(self, x):
+        batch_size, seq_len, dim = x.shape
+        assert seq_len % self.block_size == 0, "Sequence length should be divisible by block size."
+
+        x = x.view(batch_size, seq_len // self.block_size, self.block_size, dim)
+        x_shifted = torch.roll(x, shifts=self.shift_size, dims=1)
+
+        local_attention = torch.bmm(
+            x.view(batch_size * (seq_len // self.block_size), self.block_size, dim),
+            x.view(batch_size * (seq_len // self.block_size), self.block_size, dim).transpose(1, 2)
+        )
+
+        shifted_attention = torch.bmm(
+            x_shifted.view(batch_size * (seq_len // self.block_size), self.block_size, dim),
+            x_shifted.view(batch_size * (seq_len // self.block_size), self.block_size, dim).transpose(1, 2)
+        )
+
+        attention = local_attention + shifted_attention
+        return attention.view(batch_size, seq_len, seq_len)
+
 class LLM2Vec(pl.LightningModule):
     def __init__(
         self,
@@ -517,6 +543,7 @@ class LLM2Vec(pl.LightningModule):
         max_length: int = 512,
         doc_max_length: int = 400,
         skip_instruction: bool = True,
+        num_positional_features: int = 64,
     ):
         super().__init__()
         self.model = model
@@ -526,7 +553,8 @@ class LLM2Vec(pl.LightningModule):
         self.max_length = max_length
         self.doc_max_length = doc_max_length
         self.config = model.config
-        self.positional_encoding = LearnableFourierPositionalEncoding(model.config.hidden_size)
+        self.positional_encoding = LearnableFourierPositionalEncoding(num_features=num_positional_features)
+        self.s2_attn = ShiftedSparseAttention()
 
     @classmethod
     def _get_model_class(cls, config_class_name, enable_bidirectional):
@@ -552,7 +580,7 @@ class LLM2Vec(pl.LightningModule):
         enable_bidirectional=True,
         **kwargs,
     ):
-        keys = ["pooling_mode", "max_length", "doc_max_length", "skip_instruction"]
+        keys = ["pooling_mode", "max_length", "doc_max_length", "skip_instruction", "num_positional_features"]
         encoder_args = {
             key: kwargs.pop(key, None) for key in keys if kwargs.get(key) is not None
         }
@@ -689,8 +717,11 @@ class LLM2Vec(pl.LightningModule):
             positional_encodings = sentence_feature["positional_encodings"]
             reps.last_hidden_state += positional_encodings
 
-        return self.get_pooling(sentence_feature, reps.last_hidden_state)
+        # Apply shifted sparse attention (S2-Attn) during training
+        if self.training:
+            reps.last_hidden_state = self.s2_attn(reps.last_hidden_state)
 
+        return self.get_pooling(sentence_feature, reps.last_hidden_state)
 
     def get_pooling(self, features, last_hidden_states):
         assert (
@@ -824,7 +855,7 @@ class LLM2Vec(pl.LightningModule):
                     all_embeddings.append(result)
 
         all_embeddings = torch.cat(all_embeddings, dim=0)
-        all_embeddings = all_embeddings[np.argsort(length_sorted_idx)]
+        all_embeddings are all_embeddings[np.argsort(length_sorted_idx)]
         all_embeddings = all_embeddings.to(torch.float32)
         if convert_to_numpy:
             all_embeddings = np.asarray([emb.numpy() for emb in all_embeddings])
@@ -908,7 +939,7 @@ class LLM2Vec(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
         return optimizer
-````
+```
 
 **Integration with Multiway Transformer:**
 To integrate text and image embeddings, we employ a Multiway Transformer architecture. Each block consists of a shared self-attention module and a pool of feed-forward networks tailored for different modalities (vision, language, and vision-language). This design facilitates deep fusion of multi-modal data and modality-specific processing, making it highly effective for tasks involving complex interactions between text and images.
