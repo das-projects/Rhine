@@ -488,6 +488,26 @@ def batch_to_device(batch, target_device: device):
             batch[key] = batch[key].to(target_device)
     return batch
 
+class LearnableFourierPositionalEncoding(nn.Module):
+    def __init__(self, num_features: int, scale: float = 1.0):
+        super().__init__()
+        self.num_features = num_features
+        self.scale = scale
+        self.linear = nn.Linear(4, num_features * 2)
+
+    def forward(self, bounding_boxes: Tensor):
+        """
+        Forward pass for learnable Fourier positional encoding
+        Args:
+            bounding_boxes (Tensor): A tensor of shape (batch_size, num_boxes, 4) containing normalized bounding boxes.
+        Returns:
+            Tensor: A tensor of shape (batch_size, num_boxes, num_features * 2) containing positional encodings.
+        """
+        scaled_boxes = bounding_boxes * self.scale
+        fourier_features = self.linear(scaled_boxes)
+        pos_encodings = torch.cat([torch.sin(fourier_features), torch.cos(fourier_features)], dim=-1)
+        return pos_encodings
+
 class LLM2Vec(pl.LightningModule):
     def __init__(
         self,
@@ -506,6 +526,7 @@ class LLM2Vec(pl.LightningModule):
         self.max_length = max_length
         self.doc_max_length = doc_max_length
         self.config = model.config
+        self.positional_encoding = LearnableFourierPositionalEncoding(model.config.hidden_size)
 
     @classmethod
     def _get_model_class(cls, config_class_name, enable_bidirectional):
@@ -602,7 +623,7 @@ class LLM2Vec(pl.LightningModule):
 
         return text
 
-    def tokenize(self, texts):
+    def tokenize(self, texts, bounding_boxes=None):
         texts_2 = []
         original_texts = []
         for text in texts:
@@ -617,6 +638,11 @@ class LLM2Vec(pl.LightningModule):
             truncation=True,
             max_length=self.max_length,
         )
+
+        if bounding_boxes is not None:
+            positional_encodings = self.positional_encoding(bounding_boxes)
+            original["positional_encodings"] = positional_encodings
+
         embed_mask = None
         for t_i, t in enumerate(texts_2):
             ids = self.tokenizer(
@@ -659,7 +685,12 @@ class LLM2Vec(pl.LightningModule):
         reps = self.model(**sentence_feature)
         sentence_feature["embed_mask"] = embed_mask
 
+        if "positional_encodings" in sentence_feature:
+            positional_encodings = sentence_feature["positional_encodings"]
+            reps.last_hidden_state += positional_encodings
+
         return self.get_pooling(sentence_feature, reps.last_hidden_state)
+
 
     def get_pooling(self, features, last_hidden_states):
         assert (
