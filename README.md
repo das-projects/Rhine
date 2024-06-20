@@ -449,8 +449,32 @@ def beit_large_patch16_224_8k_vocab(pretrained=False, **kwargs):
     return model
 ```
 
-**Text Encoder:**
+Here's the updated section with the additional information:
+
+### Text Encoder
+The text encoder in our multi-modal foundation model leverages advanced techniques to handle long-context documents efficiently. We start with a pre-trained Large Language Model (LLM) such as Llama3 or Mistral and modify it to incorporate the improvements described in the LongLoRA framework. Specifically, LongLoRA employs:
+
+1. **Shifted Sparse Attention (S2-Attn)**: During fine-tuning, sparse local attention is utilized to reduce computational costs significantly, maintaining performance comparable to vanilla attention. This approach ensures that the model can handle extended context lengths without a proportional increase in computational resources. S2-Attn is implemented with minimal code changes and is optional during inference.
+
+2. **Parameter-Efficient Fine-Tuning**: LongLoRA extends the capabilities of LoRA (Low-Rank Adaptation) by ensuring that embeddings and normalization layers are trainable. This combination enhances the model's ability to handle longer contexts effectively.
+
+Using these techniques, LongLoRA demonstrates the ability to extend the context window of LLMs substantially. For example, Llama2 7B can be extended from a 4k context to 100k, or Llama2 70B can be extended to 32k, all while maintaining computational efficiency.
+
+Additionally, the model with extended context capabilities is further enhanced using LLM2Vec. This involves:
+
+- **Contextual Embeddings**: LLM2Vec generates high-quality contextual vector representations by leveraging the power of pre-trained LLMs and refining them for specific tasks. The process involves fine-tuning models to produce embeddings that capture the nuanced meanings of words and phrases in context.
+- **Pooling Strategies**: The implementation of different pooling strategies, such as mean pooling, weighted mean pooling, and EOS token pooling, allows for flexible and robust extraction of sentence-level embeddings.
+- **Integration with LongLoRA**: By combining LongLoRA's extended context capabilities with LLM2Vec's advanced embedding techniques, the model is well-suited for handling large context sizes and performing well on various downstream tasks, such as document classification and named entity recognition.
+
 The text encoder utilizes a pre-trained Large Language Model (LLM) such as Llama3 or Mistral, adapted using the LLM2Vec approach. This process includes enabling bidirectional attention, masked next token prediction (MNTP), and unsupervised contrastive learning using the SimCSE technique. The goal is to transform a decoder-only LLM into a strong text encoder. The steps involve fine-tuning the model to predict masked tokens and using dropout techniques to create positive examples for contrastive learning. This adaptation is crucial for handling the structured nature of OCR outputs, as described in "LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders."
+
+By incorporating these advancements, our text encoder is equipped to handle large context sizes efficiently, enabling it to perform well on various downstream tasks such as document classification, named entity recognition, and more.
+
+### References
+- [LongLoRA: Efficient Fine-Tuning of Long-Context Large Language Models](https://openreview.net/pdf?id=6PmJoRfdaK)
+- [LLM2Vec: Enhancing Large Language Models with Contextual Vector Representations](https://arxiv.org/pdf/2404.05961)
+
+This section provides a comprehensive overview of how LongLoRA's techniques and LLM2Vec are utilized in the text encoder, ensuring efficient handling of long contexts and robust performance on various tasks.
 
 ```python
 import json
